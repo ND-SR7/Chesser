@@ -1,2 +1,2 @@
-# Chesser
-Diplomski rad na temu šahovske platforme
+# Chesser ♟️
+Web platform for playing chess
