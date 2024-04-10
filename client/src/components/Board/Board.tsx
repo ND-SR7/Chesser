@@ -19,6 +19,15 @@ const Board = ({playerSide, fields}: BoardProps) => {
     }
 
     fields.sort(blackSideSort);
+  } else {
+    const whiteSideSort = (a: FieldModel, b: FieldModel) => {
+        if (a.row !== b.row) {
+            return b.row - a.row;
+        }
+        return a.column.localeCompare(b.column);
+    };
+
+    fields.sort(whiteSideSort);
   }
 
   const breakLine = (field: FieldModel) => {
@@ -31,7 +40,7 @@ const Board = ({playerSide, fields}: BoardProps) => {
     <BoardStyled>
       {fields.map((field) => (
         <>
-          <Field row={field.row} column={field.column as columnString} />
+          <Field row={field.row} column={field.column as columnString} piece={field.piece}/>
           {breakLine(field)}
         </>
       ))}
