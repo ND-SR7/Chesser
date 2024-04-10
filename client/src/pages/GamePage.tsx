@@ -3,6 +3,19 @@ import Board from "../components/Board/Board";
 import FieldModel from "../models/Field/Field";
 import PieceModel from "../models/Piece/Piece";
 
+import bishopWhite from "../assets/bw.png";
+import kingWhite from "../assets/kw.png";
+import knightWhite from "../assets/nw.png";
+import pawnWhite from "../assets/pw.png";
+import queenWhite from "../assets/qw.png";
+import rookWhite from "../assets/rw.png";
+import bishopBlack from "../assets/bb.png";
+import kingBlack from "../assets/kb.png";
+import knightBlack from "../assets/nb.png";
+import pawnBlack from "../assets/pb.png";
+import queenBlack from "../assets/qb.png";
+import rookBlack from "../assets/rb.png";
+
 const GamePage = () => {
   const [playerSide, setPlayerSide] = useState("");
   let sideNotSet = true;
@@ -43,38 +56,38 @@ const GamePage = () => {
   }, []);
 
   const pieces: PieceModel[] = [
-    { id: "R1", imgSrc: "rw.png", FEN: "R", PGN: "R" },
-    { id: "N1", imgSrc: "nw.png", FEN: "N", PGN: "N" },
-    { id: "B1", imgSrc: "bw.png", FEN: "B", PGN: "B" },
-    { id: "K", imgSrc: "kw.png", FEN: "K", PGN: "K" },
-    { id: "Q", imgSrc: "qw.png", FEN: "Q", PGN: "Q" },
-    { id: "B2", imgSrc: "bw.png", FEN: "B", PGN: "B" },
-    { id: "N2", imgSrc: "nw.png", FEN: "N", PGN: "N" },
-    { id: "R2", imgSrc: "rw.png", FEN: "R", PGN: "R" },
-    { id: "P1", imgSrc: "pw.png", FEN: "P", PGN: "" },
-    { id: "P2", imgSrc: "pw.png", FEN: "P", PGN: "" },
-    { id: "P3", imgSrc: "pw.png", FEN: "P", PGN: "" },
-    { id: "P4", imgSrc: "pw.png", FEN: "P", PGN: "" },
-    { id: "P5", imgSrc: "pw.png", FEN: "P", PGN: "" },
-    { id: "P6", imgSrc: "pw.png", FEN: "P", PGN: "" },
-    { id: "P7", imgSrc: "pw.png", FEN: "P", PGN: "" },
-    { id: "P8", imgSrc: "pw.png", FEN: "P", PGN: "" },
-    { id: "p1", imgSrc: "pb.png", FEN: "p", PGN: "" },
-    { id: "p2", imgSrc: "pb.png", FEN: "p", PGN: "" },
-    { id: "p3", imgSrc: "pb.png", FEN: "p", PGN: "" },
-    { id: "p4", imgSrc: "pb.png", FEN: "p", PGN: "" },
-    { id: "p5", imgSrc: "pb.png", FEN: "p", PGN: "" },
-    { id: "p6", imgSrc: "pb.png", FEN: "p", PGN: "" },
-    { id: "p7", imgSrc: "pb.png", FEN: "p", PGN: "" },
-    { id: "p8", imgSrc: "pb.png", FEN: "p", PGN: "" },
-    { id: "r1", imgSrc: "rb.png", FEN: "r", PGN: "R" },
-    { id: "n1", imgSrc: "nb.png", FEN: "n", PGN: "N" },
-    { id: "b1", imgSrc: "bb.png", FEN: "b", PGN: "B" },
-    { id: "k", imgSrc: "kb.png", FEN: "k", PGN: "K" },
-    { id: "q", imgSrc: "qb.png", FEN: "q", PGN: "Q" },
-    { id: "b2", imgSrc: "bb.png", FEN: "b", PGN: "B" },
-    { id: "n2", imgSrc: "nb.png", FEN: "n", PGN: "N" },
-    { id: "r2", imgSrc: "rb.png", FEN: "r", PGN: "R" }
+    { id: "R1", imgSrc: rookWhite, FEN: "R", PGN: "R" },
+    { id: "N1", imgSrc: knightWhite, FEN: "N", PGN: "N" },
+    { id: "B1", imgSrc: bishopWhite, FEN: "B", PGN: "B" },
+    { id: "K", imgSrc: kingWhite, FEN: "K", PGN: "K" },
+    { id: "Q", imgSrc: queenWhite, FEN: "Q", PGN: "Q" },
+    { id: "B2", imgSrc: bishopWhite, FEN: "B", PGN: "B" },
+    { id: "N2", imgSrc: knightWhite, FEN: "N", PGN: "N" },
+    { id: "R2", imgSrc: rookWhite, FEN: "R", PGN: "R" },
+    { id: "P1", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "P2", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "P3", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "P4", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "P5", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "P6", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "P7", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "P8", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "p1", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "p2", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "p3", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "p4", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "p5", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "p6", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "p7", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "p8", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "r1", imgSrc: rookBlack, FEN: "r", PGN: "R" },
+    { id: "n1", imgSrc: knightBlack, FEN: "n", PGN: "N" },
+    { id: "b1", imgSrc: bishopBlack, FEN: "b", PGN: "B" },
+    { id: "k", imgSrc: kingBlack, FEN: "k", PGN: "K" },
+    { id: "q", imgSrc: queenBlack, FEN: "q", PGN: "Q" },
+    { id: "b2", imgSrc: bishopBlack, FEN: "b", PGN: "B" },
+    { id: "n2", imgSrc: knightBlack, FEN: "n", PGN: "N" },
+    { id: "r2", imgSrc: rookBlack, FEN: "r", PGN: "R" }
   ];
 
   const setPieces = () => {

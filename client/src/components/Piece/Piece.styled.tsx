@@ -1,7 +1,7 @@
 import styled from "styled-components";
 
 const PieceStyled = styled.img`
-  border: 5px black solid;
+  width: ${(props) => props.theme.widths.full};
 `;
 
 export default PieceStyled;

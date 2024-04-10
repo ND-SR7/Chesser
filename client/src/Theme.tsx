@@ -31,6 +31,7 @@ const BaseTheme = {
   },
   borders: {
     standardBlack: "5px solid black",
+    standardBlue: "5px solid blue",
   },
   borderRadius: {
     small: "5px",
