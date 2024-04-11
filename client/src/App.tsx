@@ -1,14 +1,16 @@
 import './App.css';
 import Theme from './Theme';
+import Footer from './components/Shared/Footer/Footer';
+import Header from './components/Shared/Header/Header';
 import GamePage from './pages/GamePage';
 
 function App() {
   return (
     <Theme>
       <div className="App">
-        <header>Chesser</header> 
+        <Header />
         <GamePage />
-        <footer>Made by: ND-SR7, 2024</footer>
+        <Footer />
       </div>
     </Theme>
   );
