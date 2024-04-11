@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Board from "../components/Board/Board";
 import FieldModel from "../models/Field/Field";
 import PieceModel from "../models/Piece/Piece";
@@ -18,7 +18,9 @@ import rookBlack from "../assets/rb.png";
 
 const GamePage = () => {
   const [playerSide, setPlayerSide] = useState("");
-  let sideNotSet = true;
+  const sideNotSet = useRef(true);
+
+  const [selectedPiece, setSelectedPiece] = useState<PieceModel | null>(null);
   
   const [fields, setFields] = useState<FieldModel[]>([
     {row: 8, column: "A"}, {row: 8, column: "B"}, {row: 8, column: "C"}, {row: 8, column: "D"},
@@ -41,53 +43,54 @@ const GamePage = () => {
 
   useEffect(() => {
     setTimeout(() => {
-      if (sideNotSet) {
+      if (sideNotSet.current) {
         const prompt = window.prompt("Select side (W/B):");
       
         if (prompt !== "W" && prompt !== "B") {
           window.alert("Invalid input");
         } else {
           setPlayerSide(prompt);
-          sideNotSet = false;
+          sideNotSet.current = false;
           setPieces();
         }
       }
     }, 500);
+    // eslint-disable-next-line
   }, []);
 
   const pieces: PieceModel[] = [
-    { id: "R1", imgSrc: rookWhite, FEN: "R", PGN: "R" },
-    { id: "N1", imgSrc: knightWhite, FEN: "N", PGN: "N" },
-    { id: "B1", imgSrc: bishopWhite, FEN: "B", PGN: "B" },
-    { id: "K", imgSrc: kingWhite, FEN: "K", PGN: "K" },
-    { id: "Q", imgSrc: queenWhite, FEN: "Q", PGN: "Q" },
-    { id: "B2", imgSrc: bishopWhite, FEN: "B", PGN: "B" },
-    { id: "N2", imgSrc: knightWhite, FEN: "N", PGN: "N" },
-    { id: "R2", imgSrc: rookWhite, FEN: "R", PGN: "R" },
-    { id: "P1", imgSrc: pawnWhite, FEN: "P", PGN: "" },
-    { id: "P2", imgSrc: pawnWhite, FEN: "P", PGN: "" },
-    { id: "P3", imgSrc: pawnWhite, FEN: "P", PGN: "" },
-    { id: "P4", imgSrc: pawnWhite, FEN: "P", PGN: "" },
-    { id: "P5", imgSrc: pawnWhite, FEN: "P", PGN: "" },
-    { id: "P6", imgSrc: pawnWhite, FEN: "P", PGN: "" },
-    { id: "P7", imgSrc: pawnWhite, FEN: "P", PGN: "" },
-    { id: "P8", imgSrc: pawnWhite, FEN: "P", PGN: "" },
-    { id: "p1", imgSrc: pawnBlack, FEN: "p", PGN: "" },
-    { id: "p2", imgSrc: pawnBlack, FEN: "p", PGN: "" },
-    { id: "p3", imgSrc: pawnBlack, FEN: "p", PGN: "" },
-    { id: "p4", imgSrc: pawnBlack, FEN: "p", PGN: "" },
-    { id: "p5", imgSrc: pawnBlack, FEN: "p", PGN: "" },
-    { id: "p6", imgSrc: pawnBlack, FEN: "p", PGN: "" },
-    { id: "p7", imgSrc: pawnBlack, FEN: "p", PGN: "" },
-    { id: "p8", imgSrc: pawnBlack, FEN: "p", PGN: "" },
-    { id: "r1", imgSrc: rookBlack, FEN: "r", PGN: "R" },
-    { id: "n1", imgSrc: knightBlack, FEN: "n", PGN: "N" },
-    { id: "b1", imgSrc: bishopBlack, FEN: "b", PGN: "B" },
-    { id: "k", imgSrc: kingBlack, FEN: "k", PGN: "K" },
-    { id: "q", imgSrc: queenBlack, FEN: "q", PGN: "Q" },
-    { id: "b2", imgSrc: bishopBlack, FEN: "b", PGN: "B" },
-    { id: "n2", imgSrc: knightBlack, FEN: "n", PGN: "N" },
-    { id: "r2", imgSrc: rookBlack, FEN: "r", PGN: "R" }
+    { id: "rw1", imgSrc: rookWhite, FEN: "R", PGN: "R" },
+    { id: "nw1", imgSrc: knightWhite, FEN: "N", PGN: "N" },
+    { id: "bw1", imgSrc: bishopWhite, FEN: "B", PGN: "B" },
+    { id: "kw", imgSrc: kingWhite, FEN: "K", PGN: "K" },
+    { id: "qw", imgSrc: queenWhite, FEN: "Q", PGN: "Q" },
+    { id: "bw2", imgSrc: bishopWhite, FEN: "B", PGN: "B" },
+    { id: "nw2", imgSrc: knightWhite, FEN: "N", PGN: "N" },
+    { id: "rw2", imgSrc: rookWhite, FEN: "R", PGN: "R" },
+    { id: "pw1", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "pw2", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "pw3", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "pw4", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "pw5", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "pw6", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "pw7", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "pw8", imgSrc: pawnWhite, FEN: "P", PGN: "" },
+    { id: "pb1", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "pb2", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "pb3", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "pb4", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "pb5", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "pb6", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "pb7", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "pb8", imgSrc: pawnBlack, FEN: "p", PGN: "" },
+    { id: "rb1", imgSrc: rookBlack, FEN: "r", PGN: "R" },
+    { id: "nb1", imgSrc: knightBlack, FEN: "n", PGN: "N" },
+    { id: "bb1", imgSrc: bishopBlack, FEN: "b", PGN: "B" },
+    { id: "kb", imgSrc: kingBlack, FEN: "k", PGN: "K" },
+    { id: "qb", imgSrc: queenBlack, FEN: "q", PGN: "Q" },
+    { id: "bb2", imgSrc: bishopBlack, FEN: "b", PGN: "B" },
+    { id: "nb2", imgSrc: knightBlack, FEN: "n", PGN: "N" },
+    { id: "rb2", imgSrc: rookBlack, FEN: "r", PGN: "R" }
   ];
 
   const setPieces = () => {
@@ -104,8 +107,54 @@ const GamePage = () => {
     setFields(temp);
   };
 
+  const boardClick = (clickedOn: PieceModel | string) => {
+    const temp = [...fields];
+    if (typeof clickedOn === "string" && selectedPiece !== null) {
+
+      const fieldMatchesClick = (field: FieldModel): boolean => {
+        return field.column === clickedOn.charAt(0) && field.row === Number.parseInt(clickedOn.charAt(1));
+      };
+
+      const findPreviousField = (): FieldModel | undefined => {
+        return temp.find(field => field.piece === selectedPiece && !fieldMatchesClick(field));
+      };
+
+      const selectedField = temp.find(field => fieldMatchesClick(field));
+      if (selectedField) selectedField.piece = selectedPiece;
+
+      const previousField = findPreviousField();
+      if (previousField) previousField.piece = undefined;
+
+      setFields(temp);
+      setSelectedPiece(null);
+      
+    } else if (typeof clickedOn !== "string" && selectedPiece === null) {
+      setSelectedPiece(clickedOn);
+
+    } else if (typeof clickedOn !== "string" && selectedPiece !== null) {
+      if (clickedOn === selectedPiece) {
+        setSelectedPiece(null);
+
+      } else if (clickedOn !== selectedPiece) {
+        if (clickedOn.id.charAt(1) === selectedPiece.id.charAt(1)) {
+          setSelectedPiece(clickedOn);
+
+        } else {
+          const previousField = temp.find(field => field.piece === selectedPiece);
+          if (previousField) previousField.piece = undefined;
+
+          const selectedField = temp.find(field => field.piece === clickedOn);
+          if (selectedField) selectedField.piece = selectedPiece;
+
+          setFields(temp);
+          setSelectedPiece(null);
+        }
+      }
+    }
+  };
+
   return (
-    <Board playerSide={playerSide === "W" ? "WHITE" : "BLACK"} fields={fields} />
+    <Board playerSide={playerSide === "W" ? "WHITE" : "BLACK"} fields={fields} boardClick={boardClick} />
   );
 };
 

@@ -8,11 +8,17 @@ interface FieldProps {
   row: number;
   column: columnString;
   piece?: PieceModel;
+  onClick: (clickedOn: PieceModel | string) => void;
 }
 
-const Field = ({row, column, piece}: FieldProps) => {
+const Field = ({row, column, piece, onClick}: FieldProps) => {
+  
+  const fieldClicked = (clickedOn: PieceModel | string) => {
+    onClick(clickedOn);
+  }
+
   return (
-    <FieldStyled id={column + row}>
+    <FieldStyled id={column + row} onClick={() => fieldClicked(piece ? piece : column + row)}>
       <PieceStyled src={piece?.imgSrc} />
     </FieldStyled>
   );
