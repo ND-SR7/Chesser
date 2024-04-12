@@ -3,6 +3,13 @@ import Board from "../components/Board/Board";
 import FieldModel from "../models/Field/Field";
 import PieceModel from "../models/Piece/Piece";
 
+import useSound from "use-sound";
+import moveSound from "../sounds/move.mp3";
+import checkSound from "../sounds/move-check.mp3";
+import captureSound from "../sounds/capture.mp3";
+import castleSound from "../sounds/castle.mp3";
+import promoteSound from "../sounds/promote.mp3";
+
 import bishopWhite from "../assets/bw.png";
 import kingWhite from "../assets/kw.png";
 import knightWhite from "../assets/nw.png";
@@ -17,6 +24,12 @@ import queenBlack from "../assets/qb.png";
 import rookBlack from "../assets/rb.png";
 
 const GamePage = () => {
+  const [playMoveSound] = useSound(moveSound);
+  const [playMoveCheckSound] = useSound(checkSound);
+  const [playCaptureSound] = useSound(captureSound);
+  const [playCastleSound] = useSound(castleSound);
+  const [playPromoteSound] = useSound(promoteSound);
+
   const [playerSide, setPlayerSide] = useState("");
   const sideNotSet = useRef(true);
 
@@ -127,6 +140,7 @@ const GamePage = () => {
 
       setFields(temp);
       setSelectedPiece(null);
+      playMoveSound();
       
     } else if (typeof clickedOn !== "string" && selectedPiece === null) {
       setSelectedPiece(clickedOn);
@@ -148,6 +162,7 @@ const GamePage = () => {
 
           setFields(temp);
           setSelectedPiece(null);
+          playCaptureSound();
         }
       }
     }
