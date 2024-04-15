@@ -31,6 +31,7 @@ const GamePage = () => {
   const [playPromoteSound] = useSound(promoteSound);
 
   const [playerSide, setPlayerSide] = useState("");
+  const [whiteTurn, setWhiteTurn] = useState(true);
   const sideNotSet = useRef(true);
 
   const [selectedPiece, setSelectedPiece] = useState<PieceModel | null>(null);
@@ -141,8 +142,10 @@ const GamePage = () => {
       setFields(temp);
       setSelectedPiece(null);
       playMoveSound();
+      setWhiteTurn(!whiteTurn);
       
     } else if (typeof clickedOn !== "string" && selectedPiece === null) {
+      if (whiteTurn !== (clickedOn.id.charAt(1) === "w")) return;
       setSelectedPiece(clickedOn);
 
     } else if (typeof clickedOn !== "string" && selectedPiece !== null) {
@@ -163,6 +166,7 @@ const GamePage = () => {
           setFields(temp);
           setSelectedPiece(null);
           playCaptureSound();
+          setWhiteTurn(!whiteTurn);
         }
       }
     }
