@@ -3,8 +3,9 @@ import Field, { columnString } from "../Field/Field";
 import PieceModel from "../../models/Piece/Piece";
 import BoardStyled from "./Board.styled";
 import React from "react";
+import ColumnGuide from "./ColumnGuide/ColumnGuide";
 
-type sideString = "WHITE" | "BLACK";
+export type sideString = "WHITE" | "BLACK";
 
 interface BoardProps {
   playerSide: sideString;
@@ -43,6 +44,7 @@ const Board = ({playerSide, fields, boardClick}: BoardProps) => {
     <BoardStyled>
       {fields.map((field, index) => (
         <React.Fragment key={`${field.row}-${field.column}-${index}`}>
+          {index % 8 === 0 ? field.row : ""}
           <Field
             key={`${field.row}-${field.column}`}
             row={field.row}
@@ -52,6 +54,7 @@ const Board = ({playerSide, fields, boardClick}: BoardProps) => {
           {breakLine(field)}
         </React.Fragment>
       ))}
+      <ColumnGuide side={playerSide}/>
     </BoardStyled>
   );
 };
