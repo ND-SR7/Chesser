@@ -24,6 +24,7 @@ import queenBlack from "../assets/qb.png";
 import rookBlack from "../assets/rb.png";
 import Button from "../components/Shared/Button/Button";
 import Modal from "../components/Shared/Modal/Modal";
+import TurnDisplay from "../components/Board/TurnDisplay/TurnDisplay";
 
 const GamePage = () => {
   const [playMoveSound] = useSound(moveSound);
@@ -173,6 +174,7 @@ const GamePage = () => {
 
   return (
     <>
+      <TurnDisplay whiteTurn={whiteTurn} />
       <Board playerSide={playerSide === "W" ? "WHITE" : "BLACK"} fields={fields} boardClick={boardClick} />
       <Modal heading="Select a side" content={[whiteBtn, blackBtn]} isVisible={showSideSelectModal} />
     </>
