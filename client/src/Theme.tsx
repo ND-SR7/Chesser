@@ -3,6 +3,7 @@ import { ThemeProvider } from "styled-components";
 const BaseTheme = {
   colors: {
     base: "lightblue",
+    accent: "blue",
     background: "whitesmoke",
     backgroundModal: "rgba(0,0,0,0.4)"
   },

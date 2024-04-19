@@ -22,6 +22,8 @@ import knightBlack from "../assets/nb.png";
 import pawnBlack from "../assets/pb.png";
 import queenBlack from "../assets/qb.png";
 import rookBlack from "../assets/rb.png";
+import Button from "../components/Shared/Button/Button";
+import Modal from "../components/Shared/Modal/Modal";
 
 const GamePage = () => {
   const [playMoveSound] = useSound(moveSound);
@@ -30,9 +32,13 @@ const GamePage = () => {
   const [playCastleSound] = useSound(castleSound);
   const [playPromoteSound] = useSound(promoteSound);
 
+  const [showSideSelectModal, setSideSelectModal] = useState(false);
+  const closeSelectModal = () => setSideSelectModal(false);
+  const whiteBtn: JSX.Element = <Button key="btnWhite" buttonType="button" label="White" onClick={() => setupBoard("W")} />
+  const blackBtn: JSX.Element = <Button key="btnBlack" buttonType="button" label="Black" onClick={() => setupBoard("B")} />
+
   const [playerSide, setPlayerSide] = useState("");
   const [whiteTurn, setWhiteTurn] = useState(true);
-  const sideNotSet = useRef(true);
 
   const [selectedPiece, setSelectedPiece] = useState<PieceModel | null>(null);
   
@@ -56,20 +62,7 @@ const GamePage = () => {
   ]);
 
   useEffect(() => {
-    setTimeout(() => {
-      if (sideNotSet.current) {
-        const prompt = window.prompt("Select side (W/B):");
-      
-        if (prompt !== "W" && prompt !== "B") {
-          window.alert("Invalid input");
-        } else {
-          setPlayerSide(prompt);
-          sideNotSet.current = false;
-          setPieces();
-        }
-      }
-    }, 500);
-    // eslint-disable-next-line
+    setSideSelectModal(true);
   }, []);
 
   const pieces: PieceModel[] = [
@@ -106,6 +99,12 @@ const GamePage = () => {
     { id: "nb2", imgSrc: knightBlack, FEN: "n", PGN: "N" },
     { id: "rb2", imgSrc: rookBlack, FEN: "r", PGN: "R" }
   ];
+
+  const setupBoard = (playerSide: string) => {
+    setPlayerSide(playerSide);
+    setPieces();
+    closeSelectModal();
+  }
 
   const setPieces = () => {
     const temp = [...fields];
@@ -173,7 +172,10 @@ const GamePage = () => {
   };
 
   return (
-    <Board playerSide={playerSide === "W" ? "WHITE" : "BLACK"} fields={fields} boardClick={boardClick} />
+    <>
+      <Board playerSide={playerSide === "W" ? "WHITE" : "BLACK"} fields={fields} boardClick={boardClick} />
+      <Modal heading="Select a side" content={[whiteBtn, blackBtn]} isVisible={showSideSelectModal} />
+    </>
   );
 };
 
