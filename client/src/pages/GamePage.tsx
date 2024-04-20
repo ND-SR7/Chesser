@@ -108,6 +108,14 @@ const GamePage = () => {
   ];
 
   const exportFEN = () => {
+    const whiteSideSort = (a: FieldModel, b: FieldModel) => {
+      if (a.row !== b.row) {
+          return b.row - a.row;
+      }
+      return a.column.localeCompare(b.column);
+    };
+    fields.sort(whiteSideSort);
+
     let fen = "";
     let emptySpaceCounter = 0;
     let newRowCounter = 0;
