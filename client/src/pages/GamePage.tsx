@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Board from "../components/Board/Board";
 import FieldModel from "../models/Field/Field";
 import PieceModel from "../models/Piece/Piece";
@@ -40,6 +40,12 @@ const GamePage = () => {
 
   const [playerSide, setPlayerSide] = useState("");
   const [whiteTurn, setWhiteTurn] = useState(true);
+
+  const [showExportFENModal, setExportFENModal] = useState(false);
+  
+  const [showImportFENModal, setImportFENModal] = useState(false);
+  const fenInput = <input id="fenInput" type="text" maxLength={87} />
+  const fenConfirmBtn = <Button buttonType="button" label="Confirm" onClick={() => setupFEN()} />
 
   const [selectedPiece, setSelectedPiece] = useState<PieceModel | null>(null);
   
@@ -100,6 +106,61 @@ const GamePage = () => {
     { id: "nb2", imgSrc: knightBlack, FEN: "n", PGN: "N" },
     { id: "rb2", imgSrc: rookBlack, FEN: "r", PGN: "R" }
   ];
+
+  const exportFEN = () => {
+    let fen = "";
+    let emptySpaceCounter = 0;
+    let newRowCounter = 0;
+
+    fields.forEach(field => {
+      if (field.piece) {
+        if (emptySpaceCounter > 0) fen += emptySpaceCounter;
+        fen += field.piece.FEN;
+        
+        emptySpaceCounter = 0;
+        newRowCounter++;
+      } else {
+        emptySpaceCounter++;
+        newRowCounter++;
+      }
+
+      if (emptySpaceCounter === 8) {
+        fen += emptySpaceCounter;
+        emptySpaceCounter = 0;
+      }
+
+      if (newRowCounter === 8) {
+        if (emptySpaceCounter > 0) fen += emptySpaceCounter;
+        emptySpaceCounter = 0;
+        
+        fen += "/";
+        newRowCounter = 0;
+      } 
+    });
+
+    fen = fen.substring(0, fen.length - 1);
+
+    whiteTurn ? fen += " w" : fen += " b";
+
+    // TODO: Remaining FEN structure
+
+    return <p>{fen}</p>;
+  };
+
+  // TODO: Game setup based on FEN
+  // rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2
+  const setupFEN = () => {
+    const fenInputElement = document.getElementById("fenInput") as HTMLInputElement | null;
+    const fen = fenInputElement?.value || "";
+
+    if (fen !== "") {
+      console.log(fen);
+      const temp = [...fields];
+      
+      setFields(temp);
+      setImportFENModal(false);
+    }
+  };
 
   const setupBoard = (playerSide: string) => {
     setPlayerSide(playerSide);
@@ -177,6 +238,13 @@ const GamePage = () => {
       <TurnDisplay whiteTurn={whiteTurn} />
       <Board playerSide={playerSide === "W" ? "WHITE" : "BLACK"} fields={fields} boardClick={boardClick} />
       <Modal heading="Select a side" content={[whiteBtn, blackBtn]} isVisible={showSideSelectModal} />
+
+      <Button buttonType="button" label="Import FEN" onClick={() => setImportFENModal(true)} />
+      <Button buttonType="button" label="Export FEN" onClick={() => {setExportFENModal(true);exportFEN()}} />
+      <br />
+      
+      <Modal heading="Copy FEN" content={exportFEN()} isVisible={showExportFENModal} onClose={() => setExportFENModal(false)} />
+      <Modal heading="Paste FEN" content={[fenInput, fenConfirmBtn]} isVisible={showImportFENModal} onClose={() => setImportFENModal(false)} />
     </>
   );
 };
