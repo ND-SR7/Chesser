@@ -41,8 +41,11 @@ const GamePage = () => {
   const [playerSide, setPlayerSide] = useState("");
   const [whiteTurn, setWhiteTurn] = useState(true);
 
+  const [turnCounter, setTurnCounter] = useState(0);
+  const [PGN, setPGN] = useState("");
+  const [showExportPGNModal, setExportPGNModal] = useState(false);
+
   const [showExportFENModal, setExportFENModal] = useState(false);
-  
   const [showImportFENModal, setImportFENModal] = useState(false);
   const fenInput = <input id="fenInput" type="text" maxLength={87} />
   const fenConfirmBtn = <Button buttonType="button" label="Confirm" onClick={() => setupFEN()} />
@@ -208,6 +211,14 @@ const GamePage = () => {
       const previousField = findPreviousField();
       if (previousField) previousField.piece = undefined;
 
+      if (!whiteTurn) {
+        setPGN(`${PGN + selectedPiece.PGN + clickedOn.toLowerCase()} `);
+      } else {
+        setPGN(`${PGN + (turnCounter + 1)}. ${selectedPiece.PGN + clickedOn.toLowerCase()} `);
+        setTurnCounter(turnCounter + 1);
+      }
+      console.log(PGN);
+
       setFields(temp);
       setSelectedPiece(null);
       playMoveSound();
@@ -232,6 +243,16 @@ const GamePage = () => {
           const selectedField = temp.find(field => field.piece === clickedOn);
           if (selectedField) selectedField.piece = selectedPiece;
 
+          if (!whiteTurn) {
+            const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
+            setPGN(`${PGN + piecePGN}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+          } else {
+            const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
+            setPGN(`${PGN + (turnCounter + 1)}. ${piecePGN }x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+            setTurnCounter(turnCounter + 1);
+          }
+          console.log(PGN);
+
           setFields(temp);
           setSelectedPiece(null);
           playCaptureSound();
@@ -250,9 +271,13 @@ const GamePage = () => {
       <Button buttonType="button" label="Import FEN" onClick={() => setImportFENModal(true)} />
       <Button buttonType="button" label="Export FEN" onClick={() => {setExportFENModal(true);exportFEN()}} />
       <br />
+      <Button buttonType="button" label="Export PGN" onClick={() => setExportPGNModal(true)} />
+      <br />
       
       <Modal heading="Copy FEN" content={exportFEN()} isVisible={showExportFENModal} onClose={() => setExportFENModal(false)} />
       <Modal heading="Paste FEN" content={[fenInput, fenConfirmBtn]} isVisible={showImportFENModal} onClose={() => setImportFENModal(false)} />
+
+      <Modal heading="Copy PGN" content={PGN} isVisible={showExportPGNModal} onClose={() => setExportPGNModal(false)} />
     </>
   );
 };
