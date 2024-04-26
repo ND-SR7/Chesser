@@ -51,6 +51,7 @@ const GamePage = () => {
   const fenConfirmBtn = <Button buttonType="button" label="Confirm" onClick={() => setupFEN()} />
 
   const [selectedPiece, setSelectedPiece] = useState<PieceModel | null>(null);
+  const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
   
   const [fields, setFields] = useState<FieldModel[]>([
     {row: 8, column: "A"}, {row: 8, column: "B"}, {row: 8, column: "C"}, {row: 8, column: "D"},
@@ -206,10 +207,13 @@ const GamePage = () => {
       };
 
       const selectedField = temp.find(field => fieldMatchesClick(field));
-      if (selectedField) selectedField.piece = selectedPiece;
+      selectedField!.piece = selectedPiece;
 
       const previousField = findPreviousField();
-      if (previousField) previousField.piece = undefined;
+      previousField!.piece = undefined;
+      const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
+      previousFieldDiv!.style.backgroundColor = selectedFieldColor;
+      setSelectedFieldColor("");
 
       if (!whiteTurn) {
         setPGN(`${PGN + selectedPiece.PGN + clickedOn.toLowerCase()} `);
@@ -217,7 +221,6 @@ const GamePage = () => {
         setPGN(`${PGN + (turnCounter + 1)}. ${selectedPiece.PGN + clickedOn.toLowerCase()} `);
         setTurnCounter(turnCounter + 1);
       }
-      console.log(PGN);
 
       setFields(temp);
       setSelectedPiece(null);
@@ -226,22 +229,46 @@ const GamePage = () => {
       
     } else if (typeof clickedOn !== "string" && selectedPiece === null) {
       if (whiteTurn !== (clickedOn.id.charAt(1) === "w")) return;
+      
       setSelectedPiece(clickedOn);
+
+      const pieceField = temp.find(field => field.piece === clickedOn);
+      const fieldDiv = document.getElementById(pieceField!.column+pieceField!.row);
+      setSelectedFieldColor(fieldDiv!.style.backgroundColor);
+      fieldDiv!.style.backgroundColor = "gold";
 
     } else if (typeof clickedOn !== "string" && selectedPiece !== null) {
       if (clickedOn === selectedPiece) {
         setSelectedPiece(null);
+        
+        const pieceField = temp.find(field => field.piece === clickedOn);
+        const fieldDiv = document.getElementById(pieceField!.column+pieceField!.row);
+        fieldDiv!.style.backgroundColor = selectedFieldColor;
+        setSelectedFieldColor("");
 
       } else if (clickedOn !== selectedPiece) {
         if (clickedOn.id.charAt(1) === selectedPiece.id.charAt(1)) {
           setSelectedPiece(clickedOn);
 
+          const prevPieceField = temp.find(field => field.piece === selectedPiece);
+          const nextPieceField = temp.find(field => field.piece === clickedOn);
+          const prevFieldDiv = document.getElementById(prevPieceField!.column+prevPieceField!.row);
+          const nextFieldDiv = document.getElementById(nextPieceField!.column+nextPieceField!.row);
+
+          prevFieldDiv!.style.backgroundColor = selectedFieldColor;
+          setSelectedFieldColor(nextFieldDiv!.style.backgroundColor);
+          nextFieldDiv!.style.backgroundColor = "gold";
+
         } else {
           const previousField = temp.find(field => field.piece === selectedPiece);
-          if (previousField) previousField.piece = undefined;
+          previousField!.piece = undefined;
+
+          const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
+          previousFieldDiv!.style.backgroundColor = selectedFieldColor;
+          setSelectedFieldColor("");
 
           const selectedField = temp.find(field => field.piece === clickedOn);
-          if (selectedField) selectedField.piece = selectedPiece;
+          selectedField!.piece = selectedPiece;
 
           if (!whiteTurn) {
             const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
@@ -251,7 +278,6 @@ const GamePage = () => {
             setPGN(`${PGN + (turnCounter + 1)}. ${piecePGN }x${selectedField!.column.toLowerCase() + selectedField!.row} `);
             setTurnCounter(turnCounter + 1);
           }
-          console.log(PGN);
 
           setFields(temp);
           setSelectedPiece(null);
