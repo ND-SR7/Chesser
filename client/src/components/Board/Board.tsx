@@ -1,7 +1,7 @@
 import FieldModel from "../../models/Field/Field";
 import Field, { columnString } from "../Field/Field";
 import PieceModel from "../../models/Piece/Piece";
-import BoardStyled from "./Board.styled";
+import BoardStyled, { DisabledStyle } from "./Board.styled";
 import React from "react";
 import ColumnGuide from "./ColumnGuide/ColumnGuide";
 
@@ -11,9 +11,10 @@ interface BoardProps {
   playerSide: sideString;
   fields: FieldModel[];
   boardClick: (clickedOn: PieceModel | string) => void;
+  disabled: boolean;
 }
 
-const Board = ({playerSide, fields, boardClick}: BoardProps) => {
+const Board = ({playerSide, fields, boardClick, disabled}: BoardProps) => {
   if (playerSide === "BLACK") {
     const blackSideSort = (a: FieldModel, b: FieldModel) => {
       if (a.row !== b.row) {
@@ -41,7 +42,7 @@ const Board = ({playerSide, fields, boardClick}: BoardProps) => {
   }
 
   return (
-    <BoardStyled>
+    <BoardStyled style={disabled ? DisabledStyle : {}}>
       {fields.map((field, index) => (
         <React.Fragment key={`${field.row}-${field.column}-${index}`}>
           {index % 8 === 0 ? field.row : ""}
@@ -50,7 +51,7 @@ const Board = ({playerSide, fields, boardClick}: BoardProps) => {
             row={field.row}
             column={field.column as columnString}
             piece={field.piece}
-            onClick={boardClick} />
+            onClick={disabled ? ()=>{} : boardClick} />
           {breakLine(field)}
         </React.Fragment>
       ))}

@@ -1,5 +1,9 @@
 import styled from "styled-components";
 
+export const DisabledStyle = {
+  cursor: "not-allowed"
+};
+
 const BoardStyled = styled.section`
   border: ${(props) => props.theme.borders.standardBlue};
   display: flex;

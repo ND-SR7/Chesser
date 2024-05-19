@@ -52,6 +52,16 @@ const GamePage = () => {
 
   const [selectedPiece, setSelectedPiece] = useState<PieceModel | null>(null);
   const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
+
+  const [inputDisabled, setInputDisabled] = useState(false);
+  const [showEndGameModal, setEndGameModal] = useState(false);
+  const endGameModalContent =
+    <div>
+      <p><b>PGN:</b></p>
+      <p>{PGN}</p>
+      <Button buttonType="button" label="Play Again" onClick={() => window.location.reload()} />
+    </div>
+  ;
   
   const [fields, setFields] = useState<FieldModel[]>([
     {row: 8, column: "A"}, {row: 8, column: "B"}, {row: 8, column: "C"}, {row: 8, column: "D"},
@@ -288,10 +298,18 @@ const GamePage = () => {
     }
   };
 
+  const surrender = () => {
+    playerSide === "W" ? setPGN(PGN + "0-1") : setPGN(PGN + "1-0");
+    setInputDisabled(true);
+    setEndGameModal(true);
+  };
+
   return (
     <>
       <TurnDisplay whiteTurn={whiteTurn} />
-      <Board playerSide={playerSide === "W" ? "WHITE" : "BLACK"} fields={fields} boardClick={boardClick} />
+      <Button buttonType="button" label="Surrender" onClick={() => surrender()} disabled={inputDisabled} />
+
+      <Board playerSide={playerSide === "W" ? "WHITE" : "BLACK"} fields={fields} boardClick={boardClick} disabled={inputDisabled} />
       <Modal heading="Select a side" content={[whiteBtn, blackBtn]} isVisible={showSideSelectModal} />
 
       <Button buttonType="button" label="Import FEN" onClick={() => setImportFENModal(true)} />
@@ -304,6 +322,8 @@ const GamePage = () => {
       <Modal heading="Paste FEN" content={[fenInput, fenConfirmBtn]} isVisible={showImportFENModal} onClose={() => setImportFENModal(false)} />
 
       <Modal heading="Copy PGN" content={PGN} isVisible={showExportPGNModal} onClose={() => setExportPGNModal(false)} />
+
+      <Modal heading="Game Over" content={endGameModalContent} isVisible={showEndGameModal} onClose={() => setEndGameModal(false)} />
     </>
   );
 };
