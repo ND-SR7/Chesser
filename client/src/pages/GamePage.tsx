@@ -26,6 +26,17 @@ import Button from "../components/Shared/Button/Button";
 import Modal from "../components/Shared/Modal/Modal";
 import TurnDisplay from "../components/Board/TurnDisplay/TurnDisplay";
 
+type LastMove = {
+  from: number;
+  to: number;
+  piece: string ;
+};
+
+type ValidMove = {
+  valid: boolean;
+  enPassantIndex: number;
+};
+
 const GamePage = () => {
   const [playMoveSound] = useSound(moveSound);
   const [playMoveCheckSound] = useSound(checkSound);
@@ -41,9 +52,12 @@ const GamePage = () => {
   const [playerSide, setPlayerSide] = useState("");
   const [whiteTurn, setWhiteTurn] = useState(true);
 
-  const [turnCounter, setTurnCounter] = useState(0);
+  const [turnCounter, setTurnCounter] = useState(1);
   const [PGN, setPGN] = useState("");
   const [showExportPGNModal, setExportPGNModal] = useState(false);
+
+  const [lastMove, setLastMove] = useState<LastMove>();
+  const [halfMove, setHalfMove] = useState<number>(0);
 
   const [showExportFENModal, setExportFENModal] = useState(false);
   const [showImportFENModal, setImportFENModal] = useState(false);
@@ -122,12 +136,22 @@ const GamePage = () => {
   ];
 
   const exportFEN = () => {
+    const enPassantFen = (): string => {
+      if (lastMove?.piece === "") {
+        const enPassantIndex = (lastMove.from + lastMove.to) / 2;
+        const enPassantField = fields[enPassantIndex];
+        return enPassantField.column.toLowerCase() + enPassantField.row;
+      }
+      return "-";
+    };
+
     const whiteSideSort = (a: FieldModel, b: FieldModel) => {
       if (a.row !== b.row) {
           return b.row - a.row;
       }
       return a.column.localeCompare(b.column);
     };
+
     fields.sort(whiteSideSort);
 
     let fen = "";
@@ -164,7 +188,9 @@ const GamePage = () => {
 
     whiteTurn ? fen += " w" : fen += " b";
 
-    // TODO: Remaining FEN structure
+    fen += " KQkq " // TODO: Castling
+    fen += enPassantFen();
+    fen += ` ${halfMove} ` + turnCounter;
 
     return <p>{fen}</p>;
   };
@@ -204,6 +230,207 @@ const GamePage = () => {
     setFields(temp);
   };
 
+  const isValidMove = (movingFrom: FieldModel, movingTo: FieldModel): boolean | ValidMove => {
+    const fromIndex = fields.indexOf(movingFrom);
+    const toIndex = fields.indexOf(movingTo);
+  
+    const rookMovementValid = (fromIndex: number, toIndex: number): boolean => {
+      const moveUp = -8;
+      const moveDown = 8;
+      const moveLeft = -1;
+      const moveRight = 1;
+  
+      let tempPosition = fromIndex;
+      // up movement
+      while (tempPosition + moveUp >= 0) {
+        tempPosition += moveUp;
+        if (tempPosition === toIndex) return true;
+        if (fields[tempPosition].piece !== undefined) break;
+      }
+      tempPosition = fromIndex;
+  
+      // down movement
+      while (tempPosition + moveDown < fields.length) {
+        tempPosition += moveDown;
+        if (tempPosition === toIndex) return true;
+        if (fields[tempPosition].piece !== undefined) break;
+      }
+      tempPosition = fromIndex;
+  
+      // left movement
+      while (tempPosition % 8 !== 0) {
+        tempPosition += moveLeft;
+        if (tempPosition === toIndex) return true;
+        if (fields[tempPosition].piece !== undefined) break;
+      }
+      tempPosition = fromIndex;
+  
+      // right movement
+      while (tempPosition % 8 !== 7) {
+        tempPosition += moveRight;
+        if (tempPosition === toIndex) return true;
+        if (fields[tempPosition].piece !== undefined) break;
+      }
+  
+      return false;
+    };
+  
+    const bishopMovementValid = (fromIndex: number, toIndex: number): boolean => {
+      const moveUpLeft = -9;
+      const moveUpRight = -7;
+      const moveDownLeft = 7;
+      const moveDownRight = 9;
+  
+      let tempPosition = fromIndex;
+      // up-left movement
+      while (tempPosition + moveUpLeft >= 0 && (tempPosition % 8 !== 0)) {
+        tempPosition += moveUpLeft;
+        if (tempPosition === toIndex) return true;
+        if (fields[tempPosition].piece !== undefined) break;
+      }
+      tempPosition = fromIndex;
+  
+      // up-right movement
+      while (tempPosition + moveUpRight >= 0 && (tempPosition % 8 !== 7)) {
+        tempPosition += moveUpRight;
+        if (tempPosition === toIndex) return true;
+        if (fields[tempPosition].piece !== undefined) break;
+      }
+      tempPosition = fromIndex;
+  
+      // down-left movement
+      while (tempPosition + moveDownLeft < fields.length && (tempPosition % 8 !== 0)) {
+        tempPosition += moveDownLeft;
+        if (tempPosition === toIndex) return true;
+        if (fields[tempPosition].piece !== undefined) break;
+      }
+      tempPosition = fromIndex;
+  
+      // down-right movement
+      while (tempPosition + moveDownRight < fields.length && (tempPosition % 8 !== 7)) {
+        tempPosition += moveDownRight;
+        if (tempPosition === toIndex) return true;
+        if (fields[tempPosition].piece !== undefined) break;
+      }
+  
+      return false;
+    };
+
+    const knightMovementValid = (fromIndex: number, toIndex: number): boolean => {
+      const knightMoves = [-17, -15, -10, -6, 6, 10, 15, 17];
+
+      for (let move of knightMoves) {
+        const tempPosition = fromIndex + move;
+        if (tempPosition >= 0 && tempPosition < 64) {
+          const fromRow = Math.floor(fromIndex / 8);
+          const toRow = Math.floor(tempPosition / 8);
+  
+          if (Math.abs(fromRow - toRow) <= 2) {
+            if (tempPosition === toIndex) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    };
+
+    const kingMovementValid = (fromIndex: number, toIndex: number): boolean => {
+      const kingMoves = [-9, -8, -7, -1, 1, 7, 8, 9];
+
+      for (let move of kingMoves) {
+        const tempPosition = fromIndex + move;
+        if (tempPosition >= 0 && tempPosition < 64) {
+          if (tempPosition === toIndex) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    const pawnMovementValid = (fromIndex: number, toIndex: number, pieceColor: string, lastMove: LastMove): ValidMove => {
+      const moveUp = -8;
+      const moveDown = 8;
+      const moveUpLeft = -9;
+      const moveUpRight = -7;
+      const moveDownLeft = 7;
+      const moveDownRight = 9;
+  
+      const initialRow = pieceColor === "w" ? 6 : 1;
+      const enPassantRow = pieceColor === "w" ? 3 : 4;
+      const enPassantMove = pieceColor === "w" ? 2 * moveDown : 2 * moveUp;
+  
+      if (pieceColor === "w") {
+        // move up
+        if (toIndex === fromIndex + moveUp && fields[toIndex].piece === undefined) {
+          return {valid: true, enPassantIndex: -1};
+        }
+        // move up two
+        if (Math.floor(fromIndex / 8) === initialRow) {
+          if (toIndex === fromIndex + 2 * moveUp && fields[toIndex].piece === undefined && fields[fromIndex + moveUp].piece === undefined) {
+            return {valid: true, enPassantIndex: -1};
+          }
+        }
+        // diagonal capturing
+        if (toIndex === fromIndex + moveUpLeft || toIndex === fromIndex + moveUpRight) {
+          if (fields[toIndex].piece) {
+            return {valid: true, enPassantIndex: -1};
+          }
+        }
+        // en passant
+        if (Math.floor(fromIndex / 8) === enPassantRow) {
+          if (toIndex === fromIndex + moveUpLeft || toIndex === fromIndex + moveUpRight) {
+            if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove) {
+              return {valid: true, enPassantIndex: lastMove.to};
+            }
+          }
+        }
+      } else {
+        if (toIndex === fromIndex + moveDown && fields[toIndex].piece === undefined) {
+          return {valid: true, enPassantIndex: -1};
+        }
+        if (Math.floor(fromIndex / 8) === initialRow) {
+          if (toIndex === fromIndex + 2 * moveDown && fields[toIndex].piece === undefined && fields[fromIndex + moveDown].piece === undefined) {
+            return {valid: true, enPassantIndex: -1};
+          }
+        }
+        if (toIndex === fromIndex + moveDownLeft || toIndex === fromIndex + moveDownRight) {
+          if (fields[toIndex].piece) {
+            return {valid: true, enPassantIndex: -1};
+          }
+        }
+        if (Math.floor(fromIndex / 8) === enPassantRow) {
+          if (toIndex === fromIndex + moveDownLeft || toIndex === fromIndex + moveDownRight) {
+            if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove) {
+              return {valid: true, enPassantIndex: lastMove.to};
+            }
+          }
+        }
+      }
+  
+      return {valid: false, enPassantIndex: -1};;
+    };
+  
+    const pieceColor = selectedPiece!.id.charAt(1);
+  
+    if (selectedPiece!.PGN === "R") {
+      return rookMovementValid(fromIndex, toIndex);
+    } else if (selectedPiece!.PGN === "B") {
+      return bishopMovementValid(fromIndex, toIndex);
+    } else if (selectedPiece!.PGN === "Q") {
+      return rookMovementValid(fromIndex, toIndex) || bishopMovementValid(fromIndex, toIndex);
+    } else if (selectedPiece!.PGN === "N") {
+      return knightMovementValid(fromIndex, toIndex);
+    } else if (selectedPiece!.PGN === "K") {
+      return kingMovementValid(fromIndex, toIndex);
+    } else if (selectedPiece!.PGN === "") {
+      return pawnMovementValid(fromIndex, toIndex, pieceColor, lastMove!);
+    } else {
+      return true;
+    }
+  };
+
   const boardClick = (clickedOn: PieceModel | string) => {
     const temp = [...fields];
     if (typeof clickedOn === "string" && selectedPiece !== null) {
@@ -217,24 +444,54 @@ const GamePage = () => {
       };
 
       const selectedField = temp.find(field => fieldMatchesClick(field));
-      selectedField!.piece = selectedPiece;
-
       const previousField = findPreviousField();
+
+      const validMove = isValidMove(previousField!, selectedField!);
+      if (!validMove) return;
+
+      selectedField!.piece = selectedPiece;
       previousField!.piece = undefined;
+      
       const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
       previousFieldDiv!.style.backgroundColor = selectedFieldColor;
       setSelectedFieldColor("");
 
-      if (!whiteTurn) {
-        setPGN(`${PGN + selectedPiece.PGN + clickedOn.toLowerCase()} `);
+      if (typeof validMove === "object" && validMove.enPassantIndex !== -1) {
+        const enPassantField = temp[validMove.enPassantIndex];
+        enPassantField.piece = undefined;
+
+        if (!whiteTurn) {
+          const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
+          setPGN(`${PGN + piecePGN}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+          setTurnCounter(turnCounter + 1);
+        } else {
+          const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
+          setPGN(`${PGN + (turnCounter)}. ${piecePGN }x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+        }
+        playCaptureSound();
       } else {
-        setPGN(`${PGN + (turnCounter + 1)}. ${selectedPiece.PGN + clickedOn.toLowerCase()} `);
-        setTurnCounter(turnCounter + 1);
+        if (!whiteTurn) {
+          setPGN(`${PGN + selectedPiece.PGN + clickedOn.toLowerCase()} `);
+          setTurnCounter(turnCounter + 1);
+        } else {
+          setPGN(`${PGN + (turnCounter)}. ${selectedPiece.PGN + clickedOn.toLowerCase()} `);
+        }
+        playMoveSound();
       }
 
+      if (selectedPiece.PGN === "") {
+        setHalfMove(0);
+      } else {
+        setHalfMove(halfMove + 1);
+      }
+      
+      setLastMove({
+        from: fields.indexOf(previousField!),
+        to: fields.indexOf(selectedField!),
+        piece: selectedPiece.PGN
+      });
       setFields(temp);
       setSelectedPiece(null);
-      playMoveSound();
       setWhiteTurn(!whiteTurn);
       
     } else if (typeof clickedOn !== "string" && selectedPiece === null) {
@@ -270,25 +527,33 @@ const GamePage = () => {
           nextFieldDiv!.style.backgroundColor = "gold";
 
         } else {
+          const selectedField = temp.find(field => field.piece === clickedOn);
           const previousField = temp.find(field => field.piece === selectedPiece);
+          
+          if (!isValidMove(previousField!, selectedField!)) return;
+          
           previousField!.piece = undefined;
-
           const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
           previousFieldDiv!.style.backgroundColor = selectedFieldColor;
-          setSelectedFieldColor("");
 
-          const selectedField = temp.find(field => field.piece === clickedOn);
+          setSelectedFieldColor("");
           selectedField!.piece = selectedPiece;
 
           if (!whiteTurn) {
             const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
             setPGN(`${PGN + piecePGN}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+            setTurnCounter(turnCounter + 1);
           } else {
             const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-            setPGN(`${PGN + (turnCounter + 1)}. ${piecePGN }x${selectedField!.column.toLowerCase() + selectedField!.row} `);
-            setTurnCounter(turnCounter + 1);
+            setPGN(`${PGN + (turnCounter)}. ${piecePGN }x${selectedField!.column.toLowerCase() + selectedField!.row} `);
           }
 
+          setLastMove({
+            from: fields.indexOf(previousField!),
+            to: fields.indexOf(selectedField!),
+            piece: selectedPiece.PGN
+          });
+          setHalfMove(0);
           setFields(temp);
           setSelectedPiece(null);
           playCaptureSound();
