@@ -29,7 +29,7 @@ import TurnDisplay from "../components/Board/TurnDisplay/TurnDisplay";
 type LastMove = {
   from: number;
   to: number;
-  piece: string ;
+  piece: string;
 };
 
 type ValidMove = {
@@ -136,8 +136,30 @@ const GamePage = () => {
   ];
 
   const exportFEN = () => {
+    const castlingFEN = (): string => {
+      let temp = "";
+      
+      if (fields[60].piece?.FEN === "K") {
+        if (fields[63].piece?.FEN === "R") temp += "K";
+        if (fields[56].piece?.FEN === "R") temp += "Q";
+      }
+      if (fields[4].piece?.FEN === "k") {
+        if (fields[7].piece?.FEN === "r") temp += "k";
+        if (fields[0].piece?.FEN === "r") temp += "q";
+      }
+
+      return ` ${temp} `;
+    };
+
     const enPassantFen = (): string => {
-      if (lastMove?.piece === "") {
+      const enPassantPossible = (): boolean => {
+        return lastMove?.piece === "" && (
+          (whiteTurn && (lastMove.to - lastMove.from) === 16 && Math.floor(lastMove.to / 8) === 3) ||
+          (!whiteTurn && (lastMove.from - lastMove.to) === 16 && Math.floor(lastMove.to / 8) === 4)
+        );
+      };
+
+      if (lastMove && enPassantPossible()) {
         const enPassantIndex = (lastMove.from + lastMove.to) / 2;
         const enPassantField = fields[enPassantIndex];
         return enPassantField.column.toLowerCase() + enPassantField.row;
@@ -188,7 +210,7 @@ const GamePage = () => {
 
     whiteTurn ? fen += " w" : fen += " b";
 
-    fen += " KQkq " // TODO: Castling
+    fen += castlingFEN();
     fen += enPassantFen();
     fen += ` ${halfMove} ` + turnCounter;
 
@@ -426,9 +448,8 @@ const GamePage = () => {
       return kingMovementValid(fromIndex, toIndex);
     } else if (selectedPiece!.PGN === "") {
       return pawnMovementValid(fromIndex, toIndex, pieceColor, lastMove!);
-    } else {
-      return true;
     }
+    return false;
   };
 
   const boardClick = (clickedOn: PieceModel | string) => {
@@ -447,7 +468,10 @@ const GamePage = () => {
       const previousField = findPreviousField();
 
       const validMove = isValidMove(previousField!, selectedField!);
-      if (!validMove) return;
+      if (
+        (typeof validMove === "object" && !validMove.valid) || 
+        (typeof validMove === "boolean" && !validMove)
+      ) return;
 
       selectedField!.piece = selectedPiece;
       previousField!.piece = undefined;
@@ -530,7 +554,11 @@ const GamePage = () => {
           const selectedField = temp.find(field => field.piece === clickedOn);
           const previousField = temp.find(field => field.piece === selectedPiece);
           
-          if (!isValidMove(previousField!, selectedField!)) return;
+          const validMove = isValidMove(previousField!, selectedField!);
+          if (
+            (typeof validMove === "object" && !validMove.valid) || 
+            (typeof validMove === "boolean" && !validMove)
+          ) return;
           
           previousField!.piece = undefined;
           const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
