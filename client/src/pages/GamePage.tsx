@@ -471,7 +471,25 @@ const GamePage = () => {
       if (
         (typeof validMove === "object" && !validMove.valid) || 
         (typeof validMove === "boolean" && !validMove)
-      ) return;
+      ) {
+        const fieldDiv = document.getElementById(selectedField!.column+selectedField!.row);
+        
+        if (fieldDiv) {
+          let blinkCount = 0;
+          const originalColor = fieldDiv.style.backgroundColor;
+      
+          const blinkRed = () => {
+            if (blinkCount < 6) {
+              fieldDiv.style.backgroundColor = blinkCount % 2 === 0 ? "red" : originalColor;
+              blinkCount++;
+              setTimeout(blinkRed, 100);
+            }
+          };
+      
+          blinkRed();
+        }
+        return;
+      }
 
       selectedField!.piece = selectedPiece;
       previousField!.piece = undefined;
@@ -558,7 +576,25 @@ const GamePage = () => {
           if (
             (typeof validMove === "object" && !validMove.valid) || 
             (typeof validMove === "boolean" && !validMove)
-          ) return;
+          ) {
+            const fieldDiv = document.getElementById(selectedField!.column+selectedField!.row);
+            
+            if (fieldDiv) {
+              let blinkCount = 0;
+              const originalColor = fieldDiv.style.backgroundColor;
+          
+              const blinkRed = () => {
+                if (blinkCount < 6) {
+                  fieldDiv.style.backgroundColor = blinkCount % 2 === 0 ? "red" : originalColor;
+                  blinkCount++;
+                  setTimeout(blinkRed, 100);
+                }
+              };
+          
+              blinkRed();
+            }
+            return;
+          }
           
           previousField!.piece = undefined;
           const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
