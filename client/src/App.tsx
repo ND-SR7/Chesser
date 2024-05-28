@@ -10,14 +10,16 @@ function App() {
   return (
     <Theme>
       <div className="App">
-        <BrowserRouter>
-          <Header />
-          <Routes>
-            <Route index element={<StartPage />} />
-            <Route path="/game" element={<GamePage />} />
-          </Routes>
-          <Footer />
-        </BrowserRouter>
+        <div className="no-select">
+          <BrowserRouter>
+            <Header />
+            <Routes>
+              <Route index element={<StartPage />} />
+              <Route path="/game" element={<GamePage />} />
+            </Routes>
+            <Footer />
+          </BrowserRouter>
+        </div>
       </div>
     </Theme>
   );
