@@ -1,5 +1,14 @@
+* {
+  box-sizing: border-box;
+}
+
 .App {
   text-align: center;
+
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* Internet Explorer/Edge */
+  user-select: none;         /* Non-prefixed version, currently supported by Chrome, Opera, and Edge */
 }
 
 .App-logo {
@@ -35,11 +44,4 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.no-select {
-  -webkit-user-select: none; /* Safari */
-  -moz-user-select: none;    /* Firefox */
-  -ms-user-select: none;     /* Internet Explorer/Edge */
-  user-select: none;         /* Non-prefixed version, currently supported by Chrome, Opera, and Edge */
 }
