@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
+
 import Board from "../components/Board/Board";
+import Button from "../components/Shared/Button/Button";
+import Modal from "../components/Shared/Modal/Modal";
+import TurnDisplay from "../components/Board/TurnDisplay/TurnDisplay";
+
 import FieldModel from "../models/Field/Field";
 import PieceModel from "../models/Piece/Piece";
 
@@ -22,9 +27,6 @@ import knightBlack from "../assets/nb.png";
 import pawnBlack from "../assets/pb.png";
 import queenBlack from "../assets/qb.png";
 import rookBlack from "../assets/rb.png";
-import Button from "../components/Shared/Button/Button";
-import Modal from "../components/Shared/Modal/Modal";
-import TurnDisplay from "../components/Board/TurnDisplay/TurnDisplay";
 
 type LastMove = {
   from: number;
@@ -69,13 +71,24 @@ const GamePage = () => {
 
   const [inputDisabled, setInputDisabled] = useState(false);
   const [showEndGameModal, setEndGameModal] = useState(false);
-  const endGameModalContent =
+  const endGameModalContent = (
     <div>
       <p><b>PGN:</b></p>
       <p>{PGN}</p>
       <Button buttonType="button" label="Play Again" onClick={() => window.location.reload()} />
     </div>
-  ;
+  );
+
+  const [showPromotionModal, setPromotionModal] = useState(true);
+  const promotionModalContent = (
+    <div>
+      <p><b>Select promotion type:</b></p>
+      <Button buttonType="button" label="Queen" onClick={() => promotePiece("Q")} />
+      <Button buttonType="button" label="Knight" onClick={() => promotePiece("N")} />
+      <Button buttonType="button" label="Rook" onClick={() => promotePiece("R")} />
+      <Button buttonType="button" label="Bishop" onClick={() => promotePiece("B")} />
+    </div>
+  );
   
   const [fields, setFields] = useState<FieldModel[]>([
     {row: 8, column: "A"}, {row: 8, column: "B"}, {row: 8, column: "C"}, {row: 8, column: "D"},
@@ -255,7 +268,11 @@ const GamePage = () => {
   const isValidMove = (movingFrom: FieldModel, movingTo: FieldModel): boolean | ValidMove => {
     const fromIndex = fields.indexOf(movingFrom);
     const toIndex = fields.indexOf(movingTo);
-  
+
+    // used for pawn movement; it is only forward and board orientation affects it
+    // other pieces move on an axis or circle-like, so no need for adjustment
+    const playerSideMultiplier = playerSide === "W" ? 1 : -1;
+
     const rookMovementValid = (fromIndex: number, toIndex: number): boolean => {
       const moveUp = -8;
       const moveDown = 8;
@@ -372,15 +389,31 @@ const GamePage = () => {
     };
 
     const pawnMovementValid = (fromIndex: number, toIndex: number, pieceColor: string, lastMove: LastMove): ValidMove => {
-      const moveUp = -8;
-      const moveDown = 8;
-      const moveUpLeft = -9;
-      const moveUpRight = -7;
-      const moveDownLeft = 7;
-      const moveDownRight = 9;
+      const moveUp = -8 * playerSideMultiplier;
+      const moveDown = 8 * playerSideMultiplier;
+      const moveUpLeft = -9 * playerSideMultiplier;
+      const moveUpRight = -7 * playerSideMultiplier;
+      const moveDownLeft = 7 * playerSideMultiplier;
+      const moveDownRight = 9 * playerSideMultiplier;
   
-      const initialRow = pieceColor === "w" ? 6 : 1;
-      const enPassantRow = pieceColor === "w" ? 3 : 4;
+      let initialRow;
+      if (pieceColor === "w") {
+        if (playerSide === "W") initialRow = 6;
+        else initialRow = 1;
+      } else {
+        if (playerSide === "W") initialRow = 1;
+        else initialRow = 6;
+      }
+
+      let enPassantRow;
+      if (pieceColor === "w") {
+        if (playerSide === "W") enPassantRow = 3;
+        else enPassantRow = 4;
+      } else {
+        if (playerSide === "W") enPassantRow = 4;
+        else enPassantRow = 3;
+      }
+
       const enPassantMove = pieceColor === "w" ? 2 * moveDown : 2 * moveUp;
   
       if (pieceColor === "w") {
@@ -403,7 +436,7 @@ const GamePage = () => {
         // en passant
         if (Math.floor(fromIndex / 8) === enPassantRow) {
           if (toIndex === fromIndex + moveUpLeft || toIndex === fromIndex + moveUpRight) {
-            if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove) {
+            if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove && toIndex === lastMove.to + moveUp) {
               return {valid: true, enPassantIndex: lastMove.to};
             }
           }
@@ -424,7 +457,7 @@ const GamePage = () => {
         }
         if (Math.floor(fromIndex / 8) === enPassantRow) {
           if (toIndex === fromIndex + moveDownLeft || toIndex === fromIndex + moveDownRight) {
-            if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove) {
+            if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove && toIndex === lastMove.to + moveDown) {
               return {valid: true, enPassantIndex: lastMove.to};
             }
           }
@@ -451,6 +484,10 @@ const GamePage = () => {
     }
     return false;
   };
+
+  const promotePiece = (promoteTo: string) => {
+    setPromotionModal(false);
+  }
 
   const boardClick = (clickedOn: PieceModel | string) => {
     const temp = [...fields];
@@ -651,6 +688,8 @@ const GamePage = () => {
       <Modal heading="Paste FEN" content={[fenInput, fenConfirmBtn]} isVisible={showImportFENModal} onClose={() => setImportFENModal(false)} />
 
       <Modal heading="Copy PGN" content={PGN} isVisible={showExportPGNModal} onClose={() => setExportPGNModal(false)} />
+
+      <Modal heading="Pawn Promotion" content={promotionModalContent} isVisible={showPromotionModal} />
 
       <Modal heading="Game Over" content={endGameModalContent} isVisible={showEndGameModal} onClose={() => setEndGameModal(false)} />
     </>
