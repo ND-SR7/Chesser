@@ -11,6 +11,14 @@
   user-select: none;         /* Non-prefixed version, currently supported by Chrome, Opera, and Edge */
 }
 
+/* allow selection for export modals */
+.App > div > div > section {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: unset;
+  user-select: text;
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;

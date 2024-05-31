@@ -63,8 +63,9 @@ const GamePage = () => {
 
   const [showExportFENModal, setExportFENModal] = useState(false);
   const [showImportFENModal, setImportFENModal] = useState(false);
-  const fenInput = <input id="fenInput" type="text" maxLength={87} />
-  const fenConfirmBtn = <Button buttonType="button" label="Confirm" onClick={() => setupFEN()} />
+  const [disableFenBtn, setDisableFenBtn] = useState(false);
+  const fenInput = <input id="fenInput" key="fenInput" type="text" maxLength={87} size={60} />
+  const fenConfirmBtn = <Button key="importFenBtn" buttonType="button" label="Confirm" onClick={() => setupFEN()} />
 
   const [selectedPiece, setSelectedPiece] = useState<PieceModel | null>(null);
   const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
@@ -79,7 +80,7 @@ const GamePage = () => {
     </div>
   );
 
-  const [showPromotionModal, setPromotionModal] = useState(true);
+  const [showPromotionModal, setPromotionModal] = useState(false);
   const promotionModalContent = (
     <div>
       <p><b>Select promotion type:</b></p>
@@ -148,6 +149,15 @@ const GamePage = () => {
     { id: "rb2", imgSrc: rookBlack, FEN: "r", PGN: "R" }
   ];
 
+  // used for building and parsing FEN string
+  // it is top to bottom, from white perspective
+  const whiteSideSort = (a: FieldModel, b: FieldModel) => {
+    if (a.row !== b.row) {
+        return b.row - a.row;
+    }
+    return a.column.localeCompare(b.column);
+  };
+
   const exportFEN = () => {
     const castlingFEN = (): string => {
       let temp = "";
@@ -178,13 +188,6 @@ const GamePage = () => {
         return enPassantField.column.toLowerCase() + enPassantField.row;
       }
       return "-";
-    };
-
-    const whiteSideSort = (a: FieldModel, b: FieldModel) => {
-      if (a.row !== b.row) {
-          return b.row - a.row;
-      }
-      return a.column.localeCompare(b.column);
     };
 
     fields.sort(whiteSideSort);
@@ -230,18 +233,94 @@ const GamePage = () => {
     return <p>{fen}</p>;
   };
 
-  // TODO: Game setup based on FEN
-  // rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2
+  // Test FEN: rnbqkbnr/pp1p1ppp/8/2pPp3/8/8/PPP1PPPP/RNBQKBNR w KQkq c6 0 3
   const setupFEN = () => {
     const fenInputElement = document.getElementById("fenInput") as HTMLInputElement | null;
-    const fen = fenInputElement?.value || "";
+    const fen = fenInputElement?.value.trim() || "";
 
     if (fen !== "") {
-      console.log(fen);
-      const temp = [...fields];
-      
-      setFields(temp);
-      setImportFENModal(false);
+      try {
+        let temp = [...fields];
+        temp.sort(whiteSideSort);
+
+        // gathering all pieces and clearing the board
+        const pieces = temp.map(field => field.piece).filter(piece => piece !== undefined);
+        temp.forEach(field => field.piece = undefined);
+        
+        // setting up the board
+        const boardFEN = fen.split(" ")[0];
+        let fieldIndex = 0;
+        for (let i = 0; i < boardFEN.length; i++) {
+          const char = boardFEN[i];
+          switch (char) {
+            case "r":
+            case "n":
+            case "b":
+            case "q":
+            case "k":
+            case "p":
+              const blackPieceIdPrefix = char.toLowerCase() + "b";
+              const foundBlackPiece = pieces.find(p => p?.id.includes(blackPieceIdPrefix));
+              if (foundBlackPiece) {
+                temp[fieldIndex].piece = foundBlackPiece;
+                pieces.splice(pieces.indexOf(foundBlackPiece), 1);
+              }
+              fieldIndex++;
+              break;
+            case "R":
+            case "N":
+            case "B":
+            case "Q":
+            case "K":
+            case "P":
+              const whitePieceIdPrefix = char.toLowerCase() + "w";
+              const foundWhitePiece = pieces.find(p => p?.id.includes(whitePieceIdPrefix));
+              if (foundWhitePiece) {
+                temp[fieldIndex].piece = foundWhitePiece;
+                pieces.splice(pieces.indexOf(foundWhitePiece), 1);
+              }
+              fieldIndex++;
+              break;
+            case "/":
+              continue;
+            default:
+              const emptyFields = parseInt(char);
+              if (emptyFields === 1) {
+                fieldIndex++;
+                break;
+              }
+              fieldIndex += emptyFields;
+              break;
+          }
+        }
+
+        // setting the turn
+        const whiteTurnFEN = fen.split(" ")[1] === "w" ? true : false;
+        setWhiteTurn(whiteTurnFEN);
+
+        // TODO: disable castling if not present in FEN string
+
+        // setting enPassant possibility
+        const enPasasntFEN = fen.split(" ")[3].toUpperCase();
+        if (enPasasntFEN !== "-") {
+          const enPassantField = fields.find(field => field.column + field.row === enPasasntFEN);
+          const toIndex = fields.indexOf(enPassantField!) + (whiteTurnFEN ? 8 : -8);
+          const fromIndex = whiteTurnFEN ? toIndex - 16 : toIndex + 16;
+          
+          if (playerSide === "W") setLastMove({from: fromIndex, to: toIndex, piece: ""});
+          else setLastMove({from: toIndex, to: fromIndex, piece: ""}); // flipped when player is black
+        }
+        
+        // setting half-move and turn counter
+        setHalfMove(parseInt(fen.split(" ")[4]));
+        setTurnCounter(parseInt(fen.split(" ")[5]));
+        
+        setFields(temp);
+        setImportFENModal(false);
+        setDisableFenBtn(true);
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 
@@ -678,7 +757,7 @@ const GamePage = () => {
       <Board playerSide={playerSide === "W" ? "WHITE" : "BLACK"} fields={fields} boardClick={boardClick} disabled={inputDisabled} />
       <Modal heading="Select a side" content={[whiteBtn, blackBtn]} isVisible={showSideSelectModal} />
 
-      <Button buttonType="button" label="Import FEN" onClick={() => setImportFENModal(true)} />
+      <Button buttonType="button" label="Import FEN" onClick={() => setImportFENModal(true)} disabled={disableFenBtn} />
       <Button buttonType="button" label="Export FEN" onClick={() => {setExportFENModal(true);exportFEN()}} />
       <br />
       <Button buttonType="button" label="Export PGN" onClick={() => setExportPGNModal(true)} />
