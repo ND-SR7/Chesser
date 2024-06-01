@@ -250,49 +250,62 @@ const GamePage = () => {
         // setting up the board
         const boardFEN = fen.split(" ")[0];
         let fieldIndex = 0;
-        for (let i = 0; i < boardFEN.length; i++) {
-          const char = boardFEN[i];
-          switch (char) {
-            case "r":
-            case "n":
-            case "b":
-            case "q":
-            case "k":
-            case "p":
-              const blackPieceIdPrefix = char.toLowerCase() + "b";
-              const foundBlackPiece = pieces.find(p => p?.id.includes(blackPieceIdPrefix));
-              if (foundBlackPiece) {
-                temp[fieldIndex].piece = foundBlackPiece;
-                pieces.splice(pieces.indexOf(foundBlackPiece), 1);
-              }
-              fieldIndex++;
-              break;
-            case "R":
-            case "N":
-            case "B":
-            case "Q":
-            case "K":
-            case "P":
-              const whitePieceIdPrefix = char.toLowerCase() + "w";
-              const foundWhitePiece = pieces.find(p => p?.id.includes(whitePieceIdPrefix));
-              if (foundWhitePiece) {
-                temp[fieldIndex].piece = foundWhitePiece;
-                pieces.splice(pieces.indexOf(foundWhitePiece), 1);
-              }
-              fieldIndex++;
-              break;
-            case "/":
-              continue;
-            default:
-              const emptyFields = parseInt(char);
-              if (emptyFields === 1) {
-                fieldIndex++;
-                break;
-              }
-              fieldIndex += emptyFields;
-              break;
-          }
+        let pieceIdCounter = 0;
+
+      for (let i = 0; i < boardFEN.length; i++) {
+        const char = boardFEN[i];
+        let piece: PieceModel | undefined = undefined;
+
+        switch (char) {
+          case "r":
+            piece = {id: `rb${pieceIdCounter++}`, PGN: "R", FEN: "r", imgSrc: rookBlack};
+            break;
+          case "n":
+            piece = {id: `nb${pieceIdCounter++}`, PGN: "N", FEN: "n", imgSrc: knightBlack};
+            break;
+          case "b":
+            piece = {id: `bb${pieceIdCounter++}`, PGN: "B", FEN: "b", imgSrc: bishopBlack};
+            break;
+          case "q":
+            piece = {id: `qb${pieceIdCounter++}`, PGN: "Q", FEN: "q", imgSrc: queenBlack};
+            break;
+          case "k":
+            piece = {id: `kb${pieceIdCounter++}`, PGN: "K", FEN: "k", imgSrc: kingBlack};
+            break;
+          case "p":
+            piece = {id: `pb${pieceIdCounter++}`, PGN: "", FEN: "p", imgSrc: pawnBlack};
+            break;
+          case "R":
+            piece = {id: `rw${pieceIdCounter++}`, PGN: "R", FEN: "R", imgSrc: rookWhite};
+            break;
+          case "N":
+            piece = {id: `nw${pieceIdCounter++}`, PGN: "N", FEN: "N", imgSrc: knightWhite};
+            break;
+          case "B":
+            piece = {id: `bw${pieceIdCounter++}`, PGN: "B", FEN: "B", imgSrc: bishopWhite};
+            break;
+          case "Q":
+            piece = {id: `qw${pieceIdCounter++}`, PGN: "Q", FEN: "Q", imgSrc: queenWhite};
+            break;
+          case "K":
+            piece = {id: `kw${pieceIdCounter++}`, PGN: "K", FEN: "K", imgSrc: kingWhite};
+            break;
+          case "P":
+            piece = {id: `pw${pieceIdCounter++}`, PGN: "", FEN: "P", imgSrc: pawnWhite};
+            break;
+          case "/":
+            continue;
+          default:
+            const emptyFields = parseInt(char);
+            fieldIndex += emptyFields;
+            continue;
         }
+
+        if (piece) {
+          temp[fieldIndex].piece = piece;
+          fieldIndex++;
+        }
+      }
 
         // setting the turn
         const whiteTurnFEN = fen.split(" ")[1] === "w" ? true : false;
