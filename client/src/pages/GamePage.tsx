@@ -243,8 +243,7 @@ const GamePage = () => {
         let temp = [...fields];
         temp.sort(whiteSideSort);
 
-        // gathering all pieces and clearing the board
-        const pieces = temp.map(field => field.piece).filter(piece => piece !== undefined);
+        // clearing the board
         temp.forEach(field => field.piece = undefined);
         
         // setting up the board
@@ -577,6 +576,43 @@ const GamePage = () => {
     return false;
   };
 
+  // when two or more pieces of the same type can reach the same field
+  // additional data is written to PGN to differentiate between them
+  const getPieceDisambiguation = (previousField: FieldModel, selectedField: FieldModel): string => {
+    const piecePGN = selectedPiece!.PGN;
+
+    const sameTypePieces = fields.filter(field => field.piece?.PGN === piecePGN &&
+      field.piece !== selectedPiece &&
+      field.piece.id.charAt(1) === selectedPiece!.id.charAt(1));
+
+    const sameMovePieces = sameTypePieces.filter(field => {
+      const validMove = isValidMove(field, selectedField);
+
+      if (typeof validMove === "object") return validMove.valid;
+      
+      return validMove;
+    });
+
+    let disambiguation = "";
+    
+    if (piecePGN !== "" && sameMovePieces.length > 0) {
+      const sameColumn = sameMovePieces.some(field => field.column === previousField.column);
+      const sameRow = sameMovePieces.some(field => field.row === previousField.row);
+
+      if (sameColumn && sameRow) {
+        disambiguation += previousField.column.toLowerCase() + previousField.row;
+      } else if (sameColumn) {
+        disambiguation += previousField.row;
+      } else if (sameRow) {
+        disambiguation += previousField.column.toLowerCase();
+      } else {
+        disambiguation += previousField.column.toLowerCase();
+      }
+    }
+
+    return disambiguation;
+  };
+
   const promotePiece = (promoteTo: string) => {
     const temp = [...fields];
     if (!whiteTurn) {
@@ -619,7 +655,7 @@ const GamePage = () => {
     playPromoteSound();
     setFields(temp);
     setPromotionModal(false);
-  }
+  };
 
   const boardClick = (clickedOn: PieceModel | string) => {
     const temp = [...fields];
@@ -660,6 +696,8 @@ const GamePage = () => {
         return;
       }
 
+      const pieceDisambiguation = getPieceDisambiguation(previousField!, selectedField!);
+
       selectedField!.piece = selectedPiece;
       previousField!.piece = undefined;
       
@@ -673,19 +711,19 @@ const GamePage = () => {
 
         if (!whiteTurn) {
           const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-          setPGN(`${PGN + piecePGN}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+          setPGN(`${PGN + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
           setTurnCounter(turnCounter + 1);
         } else {
           const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-          setPGN(`${PGN + (turnCounter)}. ${piecePGN }x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+          setPGN(`${PGN + (turnCounter)}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
         }
         playCaptureSound();
       } else {
         if (!whiteTurn) {
-          setPGN(`${PGN + selectedPiece.PGN + clickedOn.toLowerCase()} `);
+          setPGN(`${PGN + selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
           setTurnCounter(turnCounter + 1);
         } else {
-          setPGN(`${PGN + (turnCounter)}. ${selectedPiece.PGN + clickedOn.toLowerCase()} `);
+          setPGN(`${PGN + (turnCounter)}. ${selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
         }
         playMoveSound();
       }
@@ -771,6 +809,8 @@ const GamePage = () => {
             }
             return;
           }
+
+          const pieceDisambiguation = getPieceDisambiguation(previousField!, selectedField!);
           
           previousField!.piece = undefined;
           const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
@@ -781,11 +821,11 @@ const GamePage = () => {
 
           if (!whiteTurn) {
             const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-            setPGN(`${PGN + piecePGN}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+            setPGN(`${PGN + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
             setTurnCounter(turnCounter + 1);
           } else {
             const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-            setPGN(`${PGN + (turnCounter)}. ${piecePGN }x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+            setPGN(`${PGN + (turnCounter)}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
           }
 
           if (
