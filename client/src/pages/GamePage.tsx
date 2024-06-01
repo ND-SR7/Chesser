@@ -565,6 +565,46 @@ const GamePage = () => {
   };
 
   const promotePiece = (promoteTo: string) => {
+    const temp = [...fields];
+    if (!whiteTurn) {
+      const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 8);
+      switch (promoteTo) {
+        case "Q":
+          promotionField!.piece = {id: "qw" + turnCounter, FEN: "Q", PGN: "Q", imgSrc: queenWhite}
+          break;
+        case "N":
+          promotionField!.piece = {id: "nw" + turnCounter, FEN: "N", PGN: "N", imgSrc: knightWhite}
+          break;
+        case "R":
+          promotionField!.piece = {id: "rw" + turnCounter, FEN: "R", PGN: "R", imgSrc: rookWhite}
+          break;
+        case "B":
+          promotionField!.piece = {id: "bw" + turnCounter, FEN: "B", PGN: "B", imgSrc: bishopWhite}
+          break;
+      }
+    } else {
+      const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 1);
+      switch (promoteTo) {
+        case "Q":
+          promotionField!.piece = {id: "qb" + turnCounter, FEN: "q", PGN: "Q", imgSrc: queenBlack}
+          break;
+        case "N":
+          promotionField!.piece = {id: "nb" + turnCounter, FEN: "n", PGN: "N", imgSrc: knightBlack}
+          break;
+        case "R":
+          promotionField!.piece = {id: "rb" + turnCounter, FEN: "r", PGN: "R", imgSrc: rookBlack}
+          break;
+        case "B":
+          promotionField!.piece = {id: "bb" + turnCounter, FEN: "b", PGN: "B", imgSrc: bishopBlack}
+          break;
+      }
+    }
+
+    const updatedPGN = `${PGN.slice(0, PGN.length - 1)}=${promoteTo} `;
+    setPGN(updatedPGN);
+
+    playPromoteSound();
+    setFields(temp);
     setPromotionModal(false);
   }
 
@@ -635,6 +675,13 @@ const GamePage = () => {
           setPGN(`${PGN + (turnCounter)}. ${selectedPiece.PGN + clickedOn.toLowerCase()} `);
         }
         playMoveSound();
+      }
+
+      if (
+        (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
+        (selectedPiece.FEN === "p" && selectedField?.row === 1)
+      ) {
+        setPromotionModal(true);
       }
 
       if (selectedPiece.PGN === "") {
@@ -726,6 +773,13 @@ const GamePage = () => {
           } else {
             const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
             setPGN(`${PGN + (turnCounter)}. ${piecePGN }x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+          }
+
+          if (
+            (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
+            (selectedPiece.FEN === "p" && selectedField?.row === 1)
+          ) {
+            setPromotionModal(true);
           }
 
           setLastMove({
