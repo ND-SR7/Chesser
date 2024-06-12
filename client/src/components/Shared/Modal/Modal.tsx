@@ -1,31 +1,33 @@
 import { IoIosCloseCircle } from "react-icons/io";
+
+import HeadingStyled from "../Heading/Heading.styled";
+import CloseButtonStyled from "../CloseButton/CloseButton.styled";
 import ModalStyled from "./Modal.styled";
-import ModalContentBox from "./ModalContetBox/ModalContetBoxStyled";
-import CloseButton from "../CloseButton/CloseButtonStyled";
-import Heading from "../Heading/HeadingStyled";
+import ModalContentBoxStyled from "./ModalContetBox/ModalContetBox.styled";
 
 interface ModalProps {
   heading: string;
   content: any;
   isVisible: boolean;
-  onClose?: () => void;
+  onClose: () => void;
+  closeable: boolean;
 }
 
-const Modal = ({ heading, content, isVisible, onClose }: ModalProps) => {
-  const closeBtn = onClose ? 
+const Modal = ({heading, content, isVisible, onClose, closeable}: ModalProps) => {
+  const closeBtn = closeable ? 
     (
-    <CloseButton onClick={() => onClose()}>
+    <CloseButtonStyled onClick={() => onClose()}>
       <IoIosCloseCircle />
-    </CloseButton>
+    </CloseButtonStyled>
     ) : null;
 
   return isVisible ? (
     <ModalStyled>
-      <ModalContentBox>
+      <ModalContentBoxStyled>
         {closeBtn}
-        <Heading>{heading}</Heading>
+        <HeadingStyled>{heading}</HeadingStyled>
         <section>{content}</section>
-      </ModalContentBox>
+      </ModalContentBoxStyled>
     </ModalStyled>
   ) : null;
 };

@@ -1,21 +1,21 @@
-import PieceModel from '../../models/Piece/Piece';
 import PieceStyled from '../Piece/Piece.styled';
 import FieldStyled from './Field.styled';
 
-export type columnString = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
+import Piece from '../../models/Piece/Piece';
+import { columnString } from '../../models/Field/Field';
 
 interface FieldProps {
   row: number;
   column: columnString;
-  piece?: PieceModel;
-  onClick: (clickedOn: PieceModel | string) => void;
+  piece?: Piece;
+  onClick: (clickedOn: Piece | string) => void;
 }
 
 const Field = ({row, column, piece, onClick}: FieldProps) => {
   
-  const fieldClicked = (clickedOn: PieceModel | string) => {
+  const fieldClicked = (clickedOn: Piece | string) => {
     onClick(clickedOn);
-  }
+  };
 
   return (
     <FieldStyled id={column + row} onClick={() => fieldClicked(piece ? piece : column + row)}>

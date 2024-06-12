@@ -1,10 +1,14 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+
 import './App.css';
+
 import Theme from './Theme';
-import Footer from './components/Shared/Footer/Footer';
+
 import Header from './components/Shared/Header/Header';
-import GamePage from './pages/GamePage';
+import Footer from './components/Shared/Footer/Footer';
+
 import StartPage from './pages/StartPage';
+import GamePage from './pages/GamePage';
 
 function App() {
   return (

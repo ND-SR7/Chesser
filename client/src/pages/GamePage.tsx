@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import Board from "../components/Board/Board";
+import Board, { sideString } from "../components/Board/Board";
 import Button from "../components/Shared/Button/Button";
 import Modal from "../components/Shared/Modal/Modal";
 import TurnDisplay from "../components/Board/TurnDisplay/TurnDisplay";
@@ -28,69 +28,12 @@ import pawnBlack from "../assets/pb.png";
 import queenBlack from "../assets/qb.png";
 import rookBlack from "../assets/rb.png";
 
-type LastMove = {
-  from: number;
-  to: number;
-  piece: string;
-};
+import { whiteSideSort } from "../services/PieceSortService";
+import { LastMove, isValidMove } from "../services/ValidMoveService";
 
-type ValidMove = {
-  valid: boolean;
-  enPassantIndex: number;
-};
+type outcomeString = "WIN" | "LOSS" | "DRAW" | "SURRENDER";
 
 const GamePage = () => {
-  const [playMoveSound] = useSound(moveSound);
-  const [playMoveCheckSound] = useSound(checkSound);
-  const [playCaptureSound] = useSound(captureSound);
-  const [playCastleSound] = useSound(castleSound);
-  const [playPromoteSound] = useSound(promoteSound);
-
-  const [showSideSelectModal, setSideSelectModal] = useState(false);
-  const closeSelectModal = () => setSideSelectModal(false);
-  const whiteBtn: JSX.Element = <Button key="btnWhite" buttonType="button" label="White" onClick={() => setupBoard("W")} />
-  const blackBtn: JSX.Element = <Button key="btnBlack" buttonType="button" label="Black" onClick={() => setupBoard("B")} />
-
-  const [playerSide, setPlayerSide] = useState("");
-  const [whiteTurn, setWhiteTurn] = useState(true);
-
-  const [turnCounter, setTurnCounter] = useState(1);
-  const [PGN, setPGN] = useState("");
-  const [showExportPGNModal, setExportPGNModal] = useState(false);
-
-  const [lastMove, setLastMove] = useState<LastMove>();
-  const [halfMove, setHalfMove] = useState<number>(0);
-
-  const [showExportFENModal, setExportFENModal] = useState(false);
-  const [showImportFENModal, setImportFENModal] = useState(false);
-  const [disableFenBtn, setDisableFenBtn] = useState(false);
-  const fenInput = <input id="fenInput" key="fenInput" type="text" maxLength={87} size={60} />
-  const fenConfirmBtn = <Button key="importFenBtn" buttonType="button" label="Confirm" onClick={() => setupFEN()} />
-
-  const [selectedPiece, setSelectedPiece] = useState<PieceModel | null>(null);
-  const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
-
-  const [inputDisabled, setInputDisabled] = useState(false);
-  const [showEndGameModal, setEndGameModal] = useState(false);
-  const endGameModalContent = (
-    <div>
-      <p><b>PGN:</b></p>
-      <p>{PGN}</p>
-      <Button buttonType="button" label="Play Again" onClick={() => window.location.reload()} />
-    </div>
-  );
-
-  const [showPromotionModal, setPromotionModal] = useState(false);
-  const promotionModalContent = (
-    <div>
-      <p><b>Select promotion type:</b></p>
-      <Button buttonType="button" label="Queen" onClick={() => promotePiece("Q")} />
-      <Button buttonType="button" label="Knight" onClick={() => promotePiece("N")} />
-      <Button buttonType="button" label="Rook" onClick={() => promotePiece("R")} />
-      <Button buttonType="button" label="Bishop" onClick={() => promotePiece("B")} />
-    </div>
-  );
-  
   const [fields, setFields] = useState<FieldModel[]>([
     {row: 8, column: "A"}, {row: 8, column: "B"}, {row: 8, column: "C"}, {row: 8, column: "D"},
     {row: 8, column: "E"}, {row: 8, column: "F"}, {row: 8, column: "G"}, {row: 8, column: "H"},
@@ -110,16 +53,12 @@ const GamePage = () => {
     {row: 1, column: "E"}, {row: 1, column: "F"}, {row: 1, column: "G"}, {row: 1, column: "H"}
   ]);
 
-  useEffect(() => {
-    setSideSelectModal(true);
-  }, []);
-
   const pieces: PieceModel[] = [
     { id: "rw1", imgSrc: rookWhite, FEN: "R", PGN: "R" },
     { id: "nw1", imgSrc: knightWhite, FEN: "N", PGN: "N" },
     { id: "bw1", imgSrc: bishopWhite, FEN: "B", PGN: "B" },
-    { id: "kw", imgSrc: kingWhite, FEN: "K", PGN: "K" },
-    { id: "qw", imgSrc: queenWhite, FEN: "Q", PGN: "Q" },
+    { id: "kw1", imgSrc: kingWhite, FEN: "K", PGN: "K" },
+    { id: "qw1", imgSrc: queenWhite, FEN: "Q", PGN: "Q" },
     { id: "bw2", imgSrc: bishopWhite, FEN: "B", PGN: "B" },
     { id: "nw2", imgSrc: knightWhite, FEN: "N", PGN: "N" },
     { id: "rw2", imgSrc: rookWhite, FEN: "R", PGN: "R" },
@@ -142,26 +81,89 @@ const GamePage = () => {
     { id: "rb1", imgSrc: rookBlack, FEN: "r", PGN: "R" },
     { id: "nb1", imgSrc: knightBlack, FEN: "n", PGN: "N" },
     { id: "bb1", imgSrc: bishopBlack, FEN: "b", PGN: "B" },
-    { id: "kb", imgSrc: kingBlack, FEN: "k", PGN: "K" },
-    { id: "qb", imgSrc: queenBlack, FEN: "q", PGN: "Q" },
+    { id: "kb1", imgSrc: kingBlack, FEN: "k", PGN: "K" },
+    { id: "qb1", imgSrc: queenBlack, FEN: "q", PGN: "Q" },
     { id: "bb2", imgSrc: bishopBlack, FEN: "b", PGN: "B" },
     { id: "nb2", imgSrc: knightBlack, FEN: "n", PGN: "N" },
     { id: "rb2", imgSrc: rookBlack, FEN: "r", PGN: "R" }
   ];
 
-  // used for building and parsing FEN string
-  // it is top to bottom, from white perspective
-  const whiteSideSort = (a: FieldModel, b: FieldModel) => {
-    if (a.row !== b.row) {
-        return b.row - a.row;
+  const [playMoveSound] = useSound(moveSound);
+  const [playCheckSound] = useSound(checkSound);
+  const [playCaptureSound] = useSound(captureSound);
+  const [playCastleSound] = useSound(castleSound);
+  const [playPromoteSound] = useSound(promoteSound);
+
+  const [playerSide, setPlayerSide] = useState<sideString>("B");
+  const [whiteTurn, setWhiteTurn] = useState(true);
+
+  const [selectedPiece, setSelectedPiece] = useState<PieceModel | null>(null);
+  const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
+
+  const [PGN, setPGN] = useState("");
+  const [turnCounter, setTurnCounter] = useState(1);
+  const [halfMove, setHalfMove] = useState<number>(0);
+  const [lastMove, setLastMove] = useState<LastMove>();
+
+  const [inputDisabled, setInputDisabled] = useState(false);
+  const [disableFenBtn, setDisableFenBtn] = useState(false);
+
+  const whiteBtn: JSX.Element = <Button key="btnWhite" buttonType="button" label="White" onClick={() => setupBoard("W")} />
+  const blackBtn: JSX.Element = <Button key="btnBlack" buttonType="button" label="Black" onClick={() => setupBoard("B")} />
+  const fenInput = <input id="fenInput" key="fenInput" type="text" maxLength={87} size={60} />
+  const fenConfirmBtn = <Button key="importFenBtn" buttonType="button" label="Confirm" onClick={() => setupFEN()} />
+  const endGameModalContent = (outcome: outcomeString) => {
+    let outcomeMessage = "";
+
+    switch(outcome) {
+      case "WIN":
+        outcomeMessage = "You have won";
+        break;
+      case "LOSS":
+        outcomeMessage = "You have been defeated";
+        break;
+      case "DRAW":
+        outcomeMessage = "Draw";
+        break;
+      case "SURRENDER":
+        outcomeMessage = "You have surrendered";
+        break;
     }
-    return a.column.localeCompare(b.column);
+
+    return (
+    <div>
+      <p><b>{outcomeMessage}</b></p>
+      <Button buttonType="button" label="Play Again" onClick={() => window.location.reload()} />
+    </div>
+    );
   };
+  const promotionModalContent = (
+    <div>
+      <p><b>Select promotion type:</b></p>
+      <Button buttonType="button" label="Queen" onClick={() => promotePiece("Q")} />
+      <Button buttonType="button" label="Knight" onClick={() => promotePiece("N")} />
+      <Button buttonType="button" label="Rook" onClick={() => promotePiece("R")} />
+      <Button buttonType="button" label="Bishop" onClick={() => promotePiece("B")} />
+    </div>
+  );
+
+  const [showModal, setModal] = useState(false);
+  const [modalHeading, setModalHeading] = useState("Select a side");
+  const [modalContent, setModalContent] = useState<any>([whiteBtn, blackBtn]);
+  const [modalCloseable, setModalCloseable] = useState(false);
+  const openModal = () => setModal(true);
+  const closeModal = () => setModal(false);
+
+  useEffect(() => {
+    setModalCloseable(false);
+    openModal();
+  }, []);
 
   const exportFEN = () => {
     const castlingFEN = (): string => {
       let temp = "";
       
+      // TODO: Add checks if moved previously
       if (fields[60].piece?.FEN === "K") {
         if (fields[63].piece?.FEN === "R") temp += "K";
         if (fields[56].piece?.FEN === "R") temp += "Q";
@@ -228,7 +230,7 @@ const GamePage = () => {
 
     fen += castlingFEN();
     fen += enPassantFen();
-    fen += ` ${halfMove} ` + turnCounter;
+    fen += ` ${halfMove} ${turnCounter}`;
 
     return <p>{fen}</p>;
   };
@@ -328,7 +330,7 @@ const GamePage = () => {
         setTurnCounter(parseInt(fen.split(" ")[5]));
         
         setFields(temp);
-        setImportFENModal(false);
+        closeModal();
         setDisableFenBtn(true);
       } catch (error) {
         console.error(error);
@@ -336,10 +338,10 @@ const GamePage = () => {
     }
   };
 
-  const setupBoard = (playerSide: string) => {
+  const setupBoard = (playerSide: sideString) => {
     setPlayerSide(playerSide);
     setPieces();
-    closeSelectModal();
+    closeModal();
   }
 
   const setPieces = () => {
@@ -356,226 +358,6 @@ const GamePage = () => {
     setFields(temp);
   };
 
-  const isValidMove = (movingFrom: FieldModel, movingTo: FieldModel): boolean | ValidMove => {
-    const fromIndex = fields.indexOf(movingFrom);
-    const toIndex = fields.indexOf(movingTo);
-
-    // used for pawn movement; it is only forward and board orientation affects it
-    // other pieces move on an axis or circle-like, so no need for adjustment
-    const playerSideMultiplier = playerSide === "W" ? 1 : -1;
-
-    const rookMovementValid = (fromIndex: number, toIndex: number): boolean => {
-      const moveUp = -8;
-      const moveDown = 8;
-      const moveLeft = -1;
-      const moveRight = 1;
-  
-      let tempPosition = fromIndex;
-      // up movement
-      while (tempPosition + moveUp >= 0) {
-        tempPosition += moveUp;
-        if (tempPosition === toIndex) return true;
-        if (fields[tempPosition].piece !== undefined) break;
-      }
-      tempPosition = fromIndex;
-  
-      // down movement
-      while (tempPosition + moveDown < fields.length) {
-        tempPosition += moveDown;
-        if (tempPosition === toIndex) return true;
-        if (fields[tempPosition].piece !== undefined) break;
-      }
-      tempPosition = fromIndex;
-  
-      // left movement
-      while (tempPosition % 8 !== 0) {
-        tempPosition += moveLeft;
-        if (tempPosition === toIndex) return true;
-        if (fields[tempPosition].piece !== undefined) break;
-      }
-      tempPosition = fromIndex;
-  
-      // right movement
-      while (tempPosition % 8 !== 7) {
-        tempPosition += moveRight;
-        if (tempPosition === toIndex) return true;
-        if (fields[tempPosition].piece !== undefined) break;
-      }
-  
-      return false;
-    };
-  
-    const bishopMovementValid = (fromIndex: number, toIndex: number): boolean => {
-      const moveUpLeft = -9;
-      const moveUpRight = -7;
-      const moveDownLeft = 7;
-      const moveDownRight = 9;
-  
-      let tempPosition = fromIndex;
-      // up-left movement
-      while (tempPosition + moveUpLeft >= 0 && (tempPosition % 8 !== 0)) {
-        tempPosition += moveUpLeft;
-        if (tempPosition === toIndex) return true;
-        if (fields[tempPosition].piece !== undefined) break;
-      }
-      tempPosition = fromIndex;
-  
-      // up-right movement
-      while (tempPosition + moveUpRight >= 0 && (tempPosition % 8 !== 7)) {
-        tempPosition += moveUpRight;
-        if (tempPosition === toIndex) return true;
-        if (fields[tempPosition].piece !== undefined) break;
-      }
-      tempPosition = fromIndex;
-  
-      // down-left movement
-      while (tempPosition + moveDownLeft < fields.length && (tempPosition % 8 !== 0)) {
-        tempPosition += moveDownLeft;
-        if (tempPosition === toIndex) return true;
-        if (fields[tempPosition].piece !== undefined) break;
-      }
-      tempPosition = fromIndex;
-  
-      // down-right movement
-      while (tempPosition + moveDownRight < fields.length && (tempPosition % 8 !== 7)) {
-        tempPosition += moveDownRight;
-        if (tempPosition === toIndex) return true;
-        if (fields[tempPosition].piece !== undefined) break;
-      }
-  
-      return false;
-    };
-
-    const knightMovementValid = (fromIndex: number, toIndex: number): boolean => {
-      const knightMoves = [-17, -15, -10, -6, 6, 10, 15, 17];
-
-      for (let move of knightMoves) {
-        const tempPosition = fromIndex + move;
-        if (tempPosition >= 0 && tempPosition < 64) {
-          const fromRow = Math.floor(fromIndex / 8);
-          const toRow = Math.floor(tempPosition / 8);
-  
-          if (Math.abs(fromRow - toRow) <= 2) {
-            if (tempPosition === toIndex) {
-              return true;
-            }
-          }
-        }
-      }
-      return false;
-    };
-
-    const kingMovementValid = (fromIndex: number, toIndex: number): boolean => {
-      const kingMoves = [-9, -8, -7, -1, 1, 7, 8, 9];
-
-      for (let move of kingMoves) {
-        const tempPosition = fromIndex + move;
-        if (tempPosition >= 0 && tempPosition < 64) {
-          if (tempPosition === toIndex) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
-
-    const pawnMovementValid = (fromIndex: number, toIndex: number, pieceColor: string, lastMove: LastMove): ValidMove => {
-      const moveUp = -8 * playerSideMultiplier;
-      const moveDown = 8 * playerSideMultiplier;
-      const moveUpLeft = -9 * playerSideMultiplier;
-      const moveUpRight = -7 * playerSideMultiplier;
-      const moveDownLeft = 7 * playerSideMultiplier;
-      const moveDownRight = 9 * playerSideMultiplier;
-  
-      let initialRow;
-      if (pieceColor === "w") {
-        if (playerSide === "W") initialRow = 6;
-        else initialRow = 1;
-      } else {
-        if (playerSide === "W") initialRow = 1;
-        else initialRow = 6;
-      }
-
-      let enPassantRow;
-      if (pieceColor === "w") {
-        if (playerSide === "W") enPassantRow = 3;
-        else enPassantRow = 4;
-      } else {
-        if (playerSide === "W") enPassantRow = 4;
-        else enPassantRow = 3;
-      }
-
-      const enPassantMove = pieceColor === "w" ? 2 * moveDown : 2 * moveUp;
-  
-      if (pieceColor === "w") {
-        // move up
-        if (toIndex === fromIndex + moveUp && fields[toIndex].piece === undefined) {
-          return {valid: true, enPassantIndex: -1};
-        }
-        // move up two
-        if (Math.floor(fromIndex / 8) === initialRow) {
-          if (toIndex === fromIndex + 2 * moveUp && fields[toIndex].piece === undefined && fields[fromIndex + moveUp].piece === undefined) {
-            return {valid: true, enPassantIndex: -1};
-          }
-        }
-        // diagonal capturing
-        if (toIndex === fromIndex + moveUpLeft || toIndex === fromIndex + moveUpRight) {
-          if (fields[toIndex].piece) {
-            return {valid: true, enPassantIndex: -1};
-          }
-        }
-        // en passant
-        if (Math.floor(fromIndex / 8) === enPassantRow) {
-          if (toIndex === fromIndex + moveUpLeft || toIndex === fromIndex + moveUpRight) {
-            if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove && toIndex === lastMove.to + moveUp) {
-              return {valid: true, enPassantIndex: lastMove.to};
-            }
-          }
-        }
-      } else {
-        if (toIndex === fromIndex + moveDown && fields[toIndex].piece === undefined) {
-          return {valid: true, enPassantIndex: -1};
-        }
-        if (Math.floor(fromIndex / 8) === initialRow) {
-          if (toIndex === fromIndex + 2 * moveDown && fields[toIndex].piece === undefined && fields[fromIndex + moveDown].piece === undefined) {
-            return {valid: true, enPassantIndex: -1};
-          }
-        }
-        if (toIndex === fromIndex + moveDownLeft || toIndex === fromIndex + moveDownRight) {
-          if (fields[toIndex].piece) {
-            return {valid: true, enPassantIndex: -1};
-          }
-        }
-        if (Math.floor(fromIndex / 8) === enPassantRow) {
-          if (toIndex === fromIndex + moveDownLeft || toIndex === fromIndex + moveDownRight) {
-            if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove && toIndex === lastMove.to + moveDown) {
-              return {valid: true, enPassantIndex: lastMove.to};
-            }
-          }
-        }
-      }
-  
-      return {valid: false, enPassantIndex: -1};;
-    };
-  
-    const pieceColor = selectedPiece!.id.charAt(1);
-  
-    if (selectedPiece!.PGN === "R") {
-      return rookMovementValid(fromIndex, toIndex);
-    } else if (selectedPiece!.PGN === "B") {
-      return bishopMovementValid(fromIndex, toIndex);
-    } else if (selectedPiece!.PGN === "Q") {
-      return rookMovementValid(fromIndex, toIndex) || bishopMovementValid(fromIndex, toIndex);
-    } else if (selectedPiece!.PGN === "N") {
-      return knightMovementValid(fromIndex, toIndex);
-    } else if (selectedPiece!.PGN === "K") {
-      return kingMovementValid(fromIndex, toIndex);
-    } else if (selectedPiece!.PGN === "") {
-      return pawnMovementValid(fromIndex, toIndex, pieceColor, lastMove!);
-    }
-    return false;
-  };
-
   // when two or more pieces of the same type can reach the same field
   // additional data is written to PGN to differentiate between them
   const getPieceDisambiguation = (previousField: FieldModel, selectedField: FieldModel): string => {
@@ -586,7 +368,7 @@ const GamePage = () => {
       field.piece.id.charAt(1) === selectedPiece!.id.charAt(1));
 
     const sameMovePieces = sameTypePieces.filter(field => {
-      const validMove = isValidMove(field, selectedField);
+      const validMove = isValidMove(fields, field, selectedField, selectedPiece!, playerSide, lastMove!);
 
       if (typeof validMove === "object") return validMove.valid;
       
@@ -615,36 +397,36 @@ const GamePage = () => {
 
   const promotePiece = (promoteTo: string) => {
     const temp = [...fields];
-    if (!whiteTurn) {
+    if (whiteTurn) {
       const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 8);
       switch (promoteTo) {
         case "Q":
-          promotionField!.piece = {id: "qw" + turnCounter, FEN: "Q", PGN: "Q", imgSrc: queenWhite}
+          promotionField!.piece = {id: `qw${turnCounter}`, FEN: "Q", PGN: "Q", imgSrc: queenWhite}
           break;
         case "N":
-          promotionField!.piece = {id: "nw" + turnCounter, FEN: "N", PGN: "N", imgSrc: knightWhite}
+          promotionField!.piece = {id: `nw${turnCounter}`, FEN: "N", PGN: "N", imgSrc: knightWhite}
           break;
         case "R":
-          promotionField!.piece = {id: "rw" + turnCounter, FEN: "R", PGN: "R", imgSrc: rookWhite}
+          promotionField!.piece = {id: `rw${turnCounter}`, FEN: "R", PGN: "R", imgSrc: rookWhite}
           break;
         case "B":
-          promotionField!.piece = {id: "bw" + turnCounter, FEN: "B", PGN: "B", imgSrc: bishopWhite}
+          promotionField!.piece = {id: `bw${turnCounter}`, FEN: "B", PGN: "B", imgSrc: bishopWhite}
           break;
       }
     } else {
       const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 1);
       switch (promoteTo) {
         case "Q":
-          promotionField!.piece = {id: "qb" + turnCounter, FEN: "q", PGN: "Q", imgSrc: queenBlack}
+          promotionField!.piece = {id: `qb${turnCounter}`, FEN: "q", PGN: "Q", imgSrc: queenBlack}
           break;
         case "N":
-          promotionField!.piece = {id: "nb" + turnCounter, FEN: "n", PGN: "N", imgSrc: knightBlack}
+          promotionField!.piece = {id: `nb${turnCounter}`, FEN: "n", PGN: "N", imgSrc: knightBlack}
           break;
         case "R":
-          promotionField!.piece = {id: "rb" + turnCounter, FEN: "r", PGN: "R", imgSrc: rookBlack}
+          promotionField!.piece = {id: `rb${turnCounter}`, FEN: "r", PGN: "R", imgSrc: rookBlack}
           break;
         case "B":
-          promotionField!.piece = {id: "bb" + turnCounter, FEN: "b", PGN: "B", imgSrc: bishopBlack}
+          promotionField!.piece = {id: `bb${turnCounter}`, FEN: "b", PGN: "B", imgSrc: bishopBlack}
           break;
       }
     }
@@ -654,7 +436,7 @@ const GamePage = () => {
 
     playPromoteSound();
     setFields(temp);
-    setPromotionModal(false);
+    closeModal();
   };
 
   const boardClick = (clickedOn: PieceModel | string) => {
@@ -672,7 +454,7 @@ const GamePage = () => {
       const selectedField = temp.find(field => fieldMatchesClick(field));
       const previousField = findPreviousField();
 
-      const validMove = isValidMove(previousField!, selectedField!);
+      const validMove = isValidMove(fields, previousField!, selectedField!, selectedPiece, playerSide, lastMove!);
       if (
         (typeof validMove === "object" && !validMove.valid) || 
         (typeof validMove === "boolean" && !validMove)
@@ -732,7 +514,10 @@ const GamePage = () => {
         (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
         (selectedPiece.FEN === "p" && selectedField?.row === 1)
       ) {
-        setPromotionModal(true);
+        setModalHeading("Pawn Promotion");
+        setModalContent(promotionModalContent);
+        setModalCloseable(false);
+        openModal();
       }
 
       if (selectedPiece.PGN === "") {
@@ -786,7 +571,7 @@ const GamePage = () => {
           const selectedField = temp.find(field => field.piece === clickedOn);
           const previousField = temp.find(field => field.piece === selectedPiece);
           
-          const validMove = isValidMove(previousField!, selectedField!);
+          const validMove = isValidMove(fields, previousField!, selectedField!, selectedPiece, playerSide, lastMove!);
           if (
             (typeof validMove === "object" && !validMove.valid) || 
             (typeof validMove === "boolean" && !validMove)
@@ -832,7 +617,10 @@ const GamePage = () => {
             (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
             (selectedPiece.FEN === "p" && selectedField?.row === 1)
           ) {
-            setPromotionModal(true);
+            setModalHeading("Pawn Promotion");
+            setModalContent(promotionModalContent);
+            setModalCloseable(false);
+            openModal();
           }
 
           setLastMove({
@@ -851,9 +639,34 @@ const GamePage = () => {
   };
 
   const surrender = () => {
-    playerSide === "W" ? setPGN(PGN + "0-1") : setPGN(PGN + "1-0");
+    playerSide === "W" ? setPGN(`${PGN}0-1`) : setPGN(`${PGN}1-0`);
     setInputDisabled(true);
-    setEndGameModal(true);
+
+    setModalHeading("Game Over");
+    setModalContent(endGameModalContent("SURRENDER"));
+    setModalCloseable(true);
+    openModal();
+  };
+
+  const importFEN = () => {
+    setModalHeading("Paste FEN");
+    setModalContent([fenInput, fenConfirmBtn]);
+    setModalCloseable(true);
+    openModal();
+  };
+
+  const displayFEN = () => {
+    setModalHeading("Copy FEN");
+    setModalContent(exportFEN());
+    setModalCloseable(true);
+    openModal();
+  };
+
+  const displayPGN = () => {
+    setModalHeading("Copy PGN");
+    setModalContent(PGN);
+    setModalCloseable(true);
+    openModal();
   };
 
   return (
@@ -861,23 +674,15 @@ const GamePage = () => {
       <TurnDisplay whiteTurn={whiteTurn} />
       <Button buttonType="button" label="Surrender" onClick={() => surrender()} disabled={inputDisabled} />
 
-      <Board playerSide={playerSide === "W" ? "WHITE" : "BLACK"} fields={fields} boardClick={boardClick} disabled={inputDisabled} />
-      <Modal heading="Select a side" content={[whiteBtn, blackBtn]} isVisible={showSideSelectModal} />
+      <Board playerSide={playerSide} fields={fields} boardClick={boardClick} disabled={inputDisabled} />
 
-      <Button buttonType="button" label="Import FEN" onClick={() => setImportFENModal(true)} disabled={disableFenBtn} />
-      <Button buttonType="button" label="Export FEN" onClick={() => {setExportFENModal(true);exportFEN()}} />
+      <Button buttonType="button" label="Import FEN" onClick={() => importFEN()} disabled={disableFenBtn} />
       <br />
-      <Button buttonType="button" label="Export PGN" onClick={() => setExportPGNModal(true)} />
+      <Button buttonType="button" label="Export FEN" onClick={() => displayFEN()} />
+      <Button buttonType="button" label="Export PGN" onClick={() => displayPGN()} />
       <br />
       
-      <Modal heading="Copy FEN" content={exportFEN()} isVisible={showExportFENModal} onClose={() => setExportFENModal(false)} />
-      <Modal heading="Paste FEN" content={[fenInput, fenConfirmBtn]} isVisible={showImportFENModal} onClose={() => setImportFENModal(false)} />
-
-      <Modal heading="Copy PGN" content={PGN} isVisible={showExportPGNModal} onClose={() => setExportPGNModal(false)} />
-
-      <Modal heading="Pawn Promotion" content={promotionModalContent} isVisible={showPromotionModal} />
-
-      <Modal heading="Game Over" content={endGameModalContent} isVisible={showEndGameModal} onClose={() => setEndGameModal(false)} />
+      <Modal heading={modalHeading} content={modalContent} isVisible={showModal} onClose={() => closeModal()} closeable={modalCloseable} />
     </>
   );
 };

@@ -17,8 +17,10 @@ const Button = ({id, label, buttonType, disabled, onClick} : ButtonProps) => {
       type={buttonType}
       onClick={onClick}
       disabled={disabled}
-      style={disabled ? DisabledStyle : {}} >{label}</ButtonStyled>
+      style={disabled ? DisabledStyle : {}}>
+        {label}
+    </ButtonStyled>
   );
-}
+};
 
 export default Button;

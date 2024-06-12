@@ -1,6 +1,6 @@
 import styled from "styled-components";
 
-const ModalContentBox = styled.div`
+const ModalContentBoxStyled = styled.div`
   background-color: ${(props) => props.theme.colors.background};
   margin: auto;
   padding: ${(props) => props.theme.paddings.large};
@@ -9,4 +9,4 @@ const ModalContentBox = styled.div`
   position: relative;
 `;
 
-export default ModalContentBox;
+export default ModalContentBoxStyled;
