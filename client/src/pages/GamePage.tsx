@@ -104,6 +104,9 @@ const GamePage = () => {
   const [turnCounter, setTurnCounter] = useState(1);
   const [halfMove, setHalfMove] = useState<number>(0);
   const [lastMove, setLastMove] = useState<LastMove>();
+  // checking if castling is legal
+  // false if moved, in order, from white: king, kingside rook, queenside rook
+  const [castling, setCastling] = useState<boolean[]>([true, true, true, true, true, true]);
 
   const [inputDisabled, setInputDisabled] = useState(false);
   const [disableFenBtn, setDisableFenBtn] = useState(false);
@@ -163,15 +166,16 @@ const GamePage = () => {
     const castlingFEN = (): string => {
       let temp = "";
       
-      // TODO: Add checks if moved previously
-      if (fields[60].piece?.FEN === "K") {
-        if (fields[63].piece?.FEN === "R") temp += "K";
-        if (fields[56].piece?.FEN === "R") temp += "Q";
+      if (fields[60].piece?.FEN === "K" && castling[0]) {
+        if (fields[63].piece?.FEN === "R" && castling[1]) temp += "K";
+        if (fields[56].piece?.FEN === "R" && castling[2]) temp += "Q";
       }
-      if (fields[4].piece?.FEN === "k") {
-        if (fields[7].piece?.FEN === "r") temp += "k";
-        if (fields[0].piece?.FEN === "r") temp += "q";
+      if (fields[4].piece?.FEN === "k" && castling[3]) {
+        if (fields[7].piece?.FEN === "r" && castling[4]) temp += "k";
+        if (fields[0].piece?.FEN === "r" && castling[5]) temp += "q";
       }
+
+      if (temp === "") temp = "-";
 
       return ` ${temp} `;
     };
@@ -312,7 +316,19 @@ const GamePage = () => {
         const whiteTurnFEN = fen.split(" ")[1] === "w" ? true : false;
         setWhiteTurn(whiteTurnFEN);
 
-        // TODO: disable castling if not present in FEN string
+        const castlingFEN = fen.split(" ")[2];
+
+        if (castlingFEN !== "-") {
+          if (!castlingFEN.includes("K")) castling[1] = false;
+          if (!castlingFEN.includes("Q")) castling[2] = false;
+          if (!castlingFEN.includes("k")) castling[4] = false;
+          if (!castlingFEN.includes("q")) castling[5] = false;
+          setCastling(castling);
+        } else {
+          castling[0] = false;
+          castling[3] = false;
+          setCastling(castling);
+        }
 
         // setting enPassant possibility
         const enPasasntFEN = fen.split(" ")[3].toUpperCase();
@@ -368,7 +384,9 @@ const GamePage = () => {
       field.piece.id.charAt(1) === selectedPiece!.id.charAt(1));
 
     const sameMovePieces = sameTypePieces.filter(field => {
-      const validMove = isValidMove(fields, field, selectedField, selectedPiece!, playerSide, lastMove!);
+      const validMove = isValidMove(
+        fields, field, selectedField, selectedPiece!, playerSide, lastMove!, castling, setCastling
+      );
 
       if (typeof validMove === "object") return validMove.valid;
       
@@ -454,7 +472,10 @@ const GamePage = () => {
       const selectedField = temp.find(field => fieldMatchesClick(field));
       const previousField = findPreviousField();
 
-      const validMove = isValidMove(fields, previousField!, selectedField!, selectedPiece, playerSide, lastMove!);
+      const validMove = isValidMove(
+        fields, previousField!, selectedField!, selectedPiece, playerSide, lastMove!, castling, setCastling
+      );
+
       if (
         (typeof validMove === "object" && !validMove.valid) || 
         (typeof validMove === "boolean" && !validMove)
@@ -478,14 +499,14 @@ const GamePage = () => {
         return;
       }
 
-      const pieceDisambiguation = getPieceDisambiguation(previousField!, selectedField!);
-
       selectedField!.piece = selectedPiece;
       previousField!.piece = undefined;
       
       const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
       previousFieldDiv!.style.backgroundColor = selectedFieldColor;
       setSelectedFieldColor("");
+
+      const pieceDisambiguation = getPieceDisambiguation(previousField!, selectedField!);
 
       if (typeof validMove === "object" && validMove.enPassantIndex !== -1) {
         const enPassantField = temp[validMove.enPassantIndex];
@@ -497,15 +518,50 @@ const GamePage = () => {
           setTurnCounter(turnCounter + 1);
         } else {
           const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-          setPGN(`${PGN + (turnCounter)}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+          setPGN(`${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
         }
         playCaptureSound();
+      } else if (selectedPiece.PGN === "K") {
+        if (selectedPiece.id.charAt(1) === "w") {
+          if (clickedOn === "G1" && previousField!.column === "E" && previousField!.row === 1) {
+              const rookField = fields.find(field => field.column + field.row === "H1");
+              const jumpField = fields.find(field => field.column + field.row === "F1");
+              jumpField!.piece = rookField!.piece;
+              rookField!.piece = undefined;
+
+              setPGN(`${PGN + turnCounter}. O-O `);
+          } else if (clickedOn === "C1" && previousField!.column === "E" && previousField!.row === 1) {
+              const rookField = fields.find(field => field.column + field.row === "A1");
+              const jumpField = fields.find(field => field.column + field.row === "D1");
+              jumpField!.piece = rookField!.piece;
+              rookField!.piece = undefined;
+
+              setPGN(`${PGN + turnCounter}. O-O-O `);
+          }
+        } else if (selectedPiece.id.charAt(1) === "b") {
+          if (clickedOn === "G8" && previousField!.column === "E" && previousField!.row === 8) {
+            const rookField = fields.find(field => field.column + field.row === "H8");
+            const jumpField = fields.find(field => field.column + field.row === "F8");
+            jumpField!.piece = rookField!.piece;
+            rookField!.piece = undefined;
+
+            setPGN(`${PGN} O-O `);
+          } else if (clickedOn === "C8" && previousField!.column === "E" && previousField!.row === 8) {
+            const rookField = fields.find(field => field.column + field.row === "A8");
+            const jumpField = fields.find(field => field.column + field.row === "D8");
+            jumpField!.piece = rookField!.piece;
+            rookField!.piece = undefined;
+
+            setPGN(`${PGN} O-O-O `);
+          }
+        }
+      playCastleSound();
       } else {
         if (!whiteTurn) {
           setPGN(`${PGN + selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
           setTurnCounter(turnCounter + 1);
         } else {
-          setPGN(`${PGN + (turnCounter)}. ${selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
+          setPGN(`${PGN + turnCounter}. ${selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
         }
         playMoveSound();
       }
@@ -571,7 +627,10 @@ const GamePage = () => {
           const selectedField = temp.find(field => field.piece === clickedOn);
           const previousField = temp.find(field => field.piece === selectedPiece);
           
-          const validMove = isValidMove(fields, previousField!, selectedField!, selectedPiece, playerSide, lastMove!);
+          const validMove = isValidMove(
+            fields, previousField!, selectedField!, selectedPiece, playerSide, lastMove!, castling, setCastling
+          );
+
           if (
             (typeof validMove === "object" && !validMove.valid) || 
             (typeof validMove === "boolean" && !validMove)
@@ -594,8 +653,6 @@ const GamePage = () => {
             }
             return;
           }
-
-          const pieceDisambiguation = getPieceDisambiguation(previousField!, selectedField!);
           
           previousField!.piece = undefined;
           const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
@@ -604,13 +661,15 @@ const GamePage = () => {
           setSelectedFieldColor("");
           selectedField!.piece = selectedPiece;
 
+          const pieceDisambiguation = getPieceDisambiguation(previousField!, selectedField!);
+
           if (!whiteTurn) {
             const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
             setPGN(`${PGN + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
             setTurnCounter(turnCounter + 1);
           } else {
             const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-            setPGN(`${PGN + (turnCounter)}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+            setPGN(`${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
           }
 
           if (
