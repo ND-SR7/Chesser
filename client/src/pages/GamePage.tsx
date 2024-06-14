@@ -29,7 +29,7 @@ import queenBlack from "../assets/qb.png";
 import rookBlack from "../assets/rb.png";
 
 import { whiteSideSort } from "../services/PieceSortService";
-import { LastMove, isValidMove } from "../services/ValidMoveService";
+import { LastMove, ValidMove, isValidMove } from "../services/ValidMoveService";
 
 type outcomeString = "WIN" | "LOSS" | "DRAW" | "SURRENDER";
 
@@ -459,140 +459,185 @@ const GamePage = () => {
 
   const boardClick = (clickedOn: PieceModel | string) => {
     const temp = [...fields];
+    
     if (typeof clickedOn === "string" && selectedPiece !== null) {
-
-      const fieldMatchesClick = (field: FieldModel): boolean => {
-        return field.column === clickedOn.charAt(0) && field.row === Number.parseInt(clickedOn.charAt(1));
-      };
-
-      const findPreviousField = (): FieldModel | undefined => {
-        return temp.find(field => field.piece === selectedPiece && !fieldMatchesClick(field));
-      };
-
-      const selectedField = temp.find(field => fieldMatchesClick(field));
-      const previousField = findPreviousField();
-
-      const validMove = isValidMove(
-        fields, previousField!, selectedField!, selectedPiece, playerSide, lastMove!, castling, setCastling
-      );
-
-      if (
-        (typeof validMove === "object" && !validMove.valid) || 
-        (typeof validMove === "boolean" && !validMove)
-      ) {
-        const fieldDiv = document.getElementById(selectedField!.column+selectedField!.row);
-        
-        if (fieldDiv) {
-          let blinkCount = 0;
-          const originalColor = fieldDiv.style.backgroundColor;
-      
-          const blinkRed = () => {
-            if (blinkCount < 6) {
-              fieldDiv.style.backgroundColor = blinkCount % 2 === 0 ? "red" : originalColor;
-              blinkCount++;
-              setTimeout(blinkRed, 100);
-            }
-          };
-      
-          blinkRed();
-        }
-        return;
-      }
-
-      selectedField!.piece = selectedPiece;
-      previousField!.piece = undefined;
-      
-      const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
-      previousFieldDiv!.style.backgroundColor = selectedFieldColor;
-      setSelectedFieldColor("");
-
-      const pieceDisambiguation = getPieceDisambiguation(previousField!, selectedField!);
-
-      if (typeof validMove === "object" && validMove.enPassantIndex !== -1) {
-        const enPassantField = temp[validMove.enPassantIndex];
-        enPassantField.piece = undefined;
-
-        if (!whiteTurn) {
-          const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-          setPGN(`${PGN + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
-          setTurnCounter(turnCounter + 1);
-        } else {
-          const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-          setPGN(`${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
-        }
-        playCaptureSound();
-      } else if (selectedPiece.PGN === "K") {
-        if (selectedPiece.id.charAt(1) === "w") {
-          if (clickedOn === "G1" && previousField!.column === "E" && previousField!.row === 1) {
-              const rookField = fields.find(field => field.column + field.row === "H1");
-              const jumpField = fields.find(field => field.column + field.row === "F1");
-              jumpField!.piece = rookField!.piece;
-              rookField!.piece = undefined;
-
-              setPGN(`${PGN + turnCounter}. O-O `);
-          } else if (clickedOn === "C1" && previousField!.column === "E" && previousField!.row === 1) {
-              const rookField = fields.find(field => field.column + field.row === "A1");
-              const jumpField = fields.find(field => field.column + field.row === "D1");
-              jumpField!.piece = rookField!.piece;
-              rookField!.piece = undefined;
-
-              setPGN(`${PGN + turnCounter}. O-O-O `);
-          }
-        } else if (selectedPiece.id.charAt(1) === "b") {
-          if (clickedOn === "G8" && previousField!.column === "E" && previousField!.row === 8) {
-            const rookField = fields.find(field => field.column + field.row === "H8");
-            const jumpField = fields.find(field => field.column + field.row === "F8");
-            jumpField!.piece = rookField!.piece;
-            rookField!.piece = undefined;
-
-            setPGN(`${PGN} O-O `);
-          } else if (clickedOn === "C8" && previousField!.column === "E" && previousField!.row === 8) {
-            const rookField = fields.find(field => field.column + field.row === "A8");
-            const jumpField = fields.find(field => field.column + field.row === "D8");
-            jumpField!.piece = rookField!.piece;
-            rookField!.piece = undefined;
-
-            setPGN(`${PGN} O-O-O `);
-          }
-        }
-      playCastleSound();
-      } else {
-        if (!whiteTurn) {
-          setPGN(`${PGN + selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
-          setTurnCounter(turnCounter + 1);
-        } else {
-          setPGN(`${PGN + turnCounter}. ${selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
-        }
-        playMoveSound();
-      }
-
-      if (
-        (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
-        (selectedPiece.FEN === "p" && selectedField?.row === 1)
-      ) {
-        setModalHeading("Pawn Promotion");
-        setModalContent(promotionModalContent);
-        setModalCloseable(false);
-        openModal();
-      }
-
-      if (selectedPiece.PGN === "") {
-        setHalfMove(0);
-      } else {
-        setHalfMove(halfMove + 1);
-      }
-      
-      setLastMove({
-        from: fields.indexOf(previousField!),
-        to: fields.indexOf(selectedField!),
-        piece: selectedPiece.PGN
-      });
-      setFields(temp);
-      setSelectedPiece(null);
-      setWhiteTurn(!whiteTurn);
-      
+      handleFieldClick(temp, clickedOn);
     } else if (typeof clickedOn !== "string" && selectedPiece === null) {
-      if (whiteTurn !== (clickedOn.id.charAt(1) === "w")) return;
+      handlePieceSelection(temp, clickedOn);
+    } else if (typeof clickedOn !== "string" && selectedPiece !== null) {
+      handlePieceClick(temp, clickedOn);
+    }
+  };
+
+  const blinkInvalidMove = (selectedField: FieldModel) => {
+    const fieldDiv = document.getElementById(selectedField.column+selectedField.row);
+      
+      if (fieldDiv) {
+        let blinkCount = 0;
+        const originalColor = fieldDiv.style.backgroundColor;
+    
+        const blinkRed = () => {
+          if (blinkCount < 6) {
+            fieldDiv.style.backgroundColor = blinkCount % 2 === 0 ? "red" : originalColor;
+            blinkCount++;
+            setTimeout(blinkRed, 100);
+          }
+        };
+    
+        blinkRed();
+      }
+  };
+
+  const updatePgnEnPassant = (temp: FieldModel[], validMove: ValidMove, selectedPiece: PieceModel, previousField: FieldModel, selectedField: FieldModel) => {
+    const enPassantField = temp[validMove.enPassantIndex];
+    enPassantField.piece = undefined;
+
+    const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
+
+    if (!whiteTurn) {
+      const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
+      setPGN(`${PGN + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+      setTurnCounter(turnCounter + 1);
+    } else {
+      const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
+      setPGN(`${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+    }
+  };
+
+  const updatePgnCastle = (selectedPiece: PieceModel, clickedOn: string, previousField: FieldModel) => {
+    if (selectedPiece.id.charAt(1) === "w") {
+      if (clickedOn === "G1" && previousField!.column === "E" && previousField!.row === 1) {
+          const rookField = fields.find(field => field.column + field.row === "H1");
+          const jumpField = fields.find(field => field.column + field.row === "F1");
+          jumpField!.piece = rookField!.piece;
+          rookField!.piece = undefined;
+
+          setPGN(`${PGN + turnCounter}. O-O `);
+      } else if (clickedOn === "C1" && previousField!.column === "E" && previousField!.row === 1) {
+          const rookField = fields.find(field => field.column + field.row === "A1");
+          const jumpField = fields.find(field => field.column + field.row === "D1");
+          jumpField!.piece = rookField!.piece;
+          rookField!.piece = undefined;
+
+          setPGN(`${PGN + turnCounter}. O-O-O `);
+      }
+    } else if (selectedPiece.id.charAt(1) === "b") {
+      if (clickedOn === "G8" && previousField!.column === "E" && previousField!.row === 8) {
+        const rookField = fields.find(field => field.column + field.row === "H8");
+        const jumpField = fields.find(field => field.column + field.row === "F8");
+        jumpField!.piece = rookField!.piece;
+        rookField!.piece = undefined;
+
+        setPGN(`${PGN} O-O `);
+      } else if (clickedOn === "C8" && previousField!.column === "E" && previousField!.row === 8) {
+        const rookField = fields.find(field => field.column + field.row === "A8");
+        const jumpField = fields.find(field => field.column + field.row === "D8");
+        jumpField!.piece = rookField!.piece;
+        rookField!.piece = undefined;
+
+        setPGN(`${PGN} O-O-O `);
+      }
+    }
+  };
+
+  const updatePgnMove = (selectedPiece: PieceModel, clickedOn: string, previousField: FieldModel, selectedField: FieldModel) => {
+    const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
+
+    if (!whiteTurn) {
+      setPGN(`${PGN + selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
+      setTurnCounter(turnCounter + 1);
+    } else {
+      setPGN(`${PGN + turnCounter}. ${selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
+    }
+  };
+
+  const updatePgnCapture = (selectedPiece: PieceModel, previousField: FieldModel, selectedField: FieldModel) => {
+    const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
+
+    if (!whiteTurn) {
+      const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField.column.toLowerCase();
+      setPGN(`${PGN + piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `);
+      setTurnCounter(turnCounter + 1);
+    } else {
+      const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField.column.toLowerCase();
+      setPGN(`${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `);
+    }
+  };
+
+  const handleFieldClick = (temp: FieldModel[], clickedOn: string) => {
+    if (selectedPiece === null) return;
+
+    const fieldMatchesClick = (field: FieldModel): boolean => {
+      return field.column === clickedOn.charAt(0) && field.row === Number.parseInt(clickedOn.charAt(1));
+    };
+
+    const findPreviousField = (): FieldModel | undefined => {
+      return temp.find(field => field.piece === selectedPiece && !fieldMatchesClick(field));
+    };
+
+    const selectedField = temp.find(field => fieldMatchesClick(field));
+    const previousField = findPreviousField();
+
+    if (selectedField === undefined || previousField === undefined) return;
+
+    const validMove = isValidMove(
+      fields, previousField, selectedField, selectedPiece, playerSide, lastMove, castling, setCastling
+    );
+
+    if (
+      (typeof validMove === "object" && !validMove.valid) || 
+      (typeof validMove === "boolean" && !validMove)
+    ) {
+      blinkInvalidMove(selectedField);
+      return;
+    }
+
+    selectedField.piece = selectedPiece;
+    previousField.piece = undefined;
+    
+    const previousFieldDiv = document.getElementById(previousField.column+previousField.row);
+    previousFieldDiv!.style.backgroundColor = selectedFieldColor;
+    setSelectedFieldColor("");
+
+    if (typeof validMove === "object" && validMove.enPassantIndex !== -1) {
+      updatePgnEnPassant(temp, validMove, selectedPiece, previousField, selectedField);
+      playCaptureSound();
+    } else if (selectedPiece.PGN === "K" && (selectedField.column === "G" || selectedField.column === "C")) {
+      updatePgnCastle(selectedPiece, clickedOn, previousField);
+      playCastleSound();
+    } else {
+      updatePgnMove(selectedPiece, clickedOn, previousField, selectedField);
+      playMoveSound();
+    }
+
+    if (
+      (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
+      (selectedPiece.FEN === "p" && selectedField?.row === 1)
+    ) {
+      setModalHeading("Pawn Promotion");
+      setModalContent(promotionModalContent);
+      setModalCloseable(false);
+      openModal();
+    }
+
+    if (selectedPiece.PGN === "") {
+      setHalfMove(0);
+    } else {
+      setHalfMove(halfMove + 1);
+    }
+    
+    setLastMove({
+      from: fields.indexOf(previousField!),
+      to: fields.indexOf(selectedField!),
+      piece: selectedPiece.PGN
+    });
+    setFields(temp);
+    setSelectedPiece(null);
+    setWhiteTurn(!whiteTurn);
+  };
+
+  const handlePieceSelection = (temp: FieldModel[], clickedOn: PieceModel) => {
+    if (whiteTurn !== (clickedOn.id.charAt(1) === "w")) return;
       
       setSelectedPiece(clickedOn);
 
@@ -600,99 +645,81 @@ const GamePage = () => {
       const fieldDiv = document.getElementById(pieceField!.column+pieceField!.row);
       setSelectedFieldColor(fieldDiv!.style.backgroundColor);
       fieldDiv!.style.backgroundColor = "gold";
+  };
 
-    } else if (typeof clickedOn !== "string" && selectedPiece !== null) {
-      if (clickedOn === selectedPiece) {
-        setSelectedPiece(null);
+  const handlePieceClick = (temp: FieldModel[], clickedOn: PieceModel) => {
+    if (selectedPiece === null) return;
+
+    if (clickedOn === selectedPiece) {
+      setSelectedPiece(null);
+      
+      const pieceField = temp.find(field => field.piece === clickedOn);
+      const fieldDiv = document.getElementById(pieceField!.column+pieceField!.row);
+      fieldDiv!.style.backgroundColor = selectedFieldColor;
+      setSelectedFieldColor("");
+    } else if (clickedOn !== selectedPiece) {
+      if (clickedOn.id.charAt(1) === selectedPiece.id.charAt(1)) {    
+        const prevPieceField = temp.find(field => field.piece === selectedPiece);
+        const nextPieceField = temp.find(field => field.piece === clickedOn);
+
+        if (prevPieceField === undefined || nextPieceField === undefined) return;
+
+        const prevFieldDiv = document.getElementById(prevPieceField.column+prevPieceField.row);
+        const nextFieldDiv = document.getElementById(nextPieceField.column+nextPieceField.row);
+
+        if (prevFieldDiv === null || nextFieldDiv === null) return;
         
-        const pieceField = temp.find(field => field.piece === clickedOn);
-        const fieldDiv = document.getElementById(pieceField!.column+pieceField!.row);
-        fieldDiv!.style.backgroundColor = selectedFieldColor;
-        setSelectedFieldColor("");
+        setSelectedPiece(clickedOn);
+        prevFieldDiv.style.backgroundColor = selectedFieldColor;
+        setSelectedFieldColor(nextFieldDiv.style.backgroundColor);
+        nextFieldDiv.style.backgroundColor = "gold";
+      } else {
+        const previousField = temp.find(field => field.piece === selectedPiece);
+        const selectedField = temp.find(field => field.piece === clickedOn);
 
-      } else if (clickedOn !== selectedPiece) {
-        if (clickedOn.id.charAt(1) === selectedPiece.id.charAt(1)) {
-          setSelectedPiece(clickedOn);
+        if (previousField == undefined || selectedField === undefined) return;
+        
+        const validMove = isValidMove(
+          fields, previousField, selectedField, selectedPiece, playerSide, lastMove, castling, setCastling
+        );
 
-          const prevPieceField = temp.find(field => field.piece === selectedPiece);
-          const nextPieceField = temp.find(field => field.piece === clickedOn);
-          const prevFieldDiv = document.getElementById(prevPieceField!.column+prevPieceField!.row);
-          const nextFieldDiv = document.getElementById(nextPieceField!.column+nextPieceField!.row);
-
-          prevFieldDiv!.style.backgroundColor = selectedFieldColor;
-          setSelectedFieldColor(nextFieldDiv!.style.backgroundColor);
-          nextFieldDiv!.style.backgroundColor = "gold";
-
-        } else {
-          const selectedField = temp.find(field => field.piece === clickedOn);
-          const previousField = temp.find(field => field.piece === selectedPiece);
-          
-          const validMove = isValidMove(
-            fields, previousField!, selectedField!, selectedPiece, playerSide, lastMove!, castling, setCastling
-          );
-
-          if (
-            (typeof validMove === "object" && !validMove.valid) || 
-            (typeof validMove === "boolean" && !validMove)
-          ) {
-            const fieldDiv = document.getElementById(selectedField!.column+selectedField!.row);
-            
-            if (fieldDiv) {
-              let blinkCount = 0;
-              const originalColor = fieldDiv.style.backgroundColor;
-          
-              const blinkRed = () => {
-                if (blinkCount < 6) {
-                  fieldDiv.style.backgroundColor = blinkCount % 2 === 0 ? "red" : originalColor;
-                  blinkCount++;
-                  setTimeout(blinkRed, 100);
-                }
-              };
-          
-              blinkRed();
-            }
-            return;
-          }
-          
-          previousField!.piece = undefined;
-          const previousFieldDiv = document.getElementById(previousField!.column+previousField!.row);
-          previousFieldDiv!.style.backgroundColor = selectedFieldColor;
-
-          setSelectedFieldColor("");
-          selectedField!.piece = selectedPiece;
-
-          const pieceDisambiguation = getPieceDisambiguation(previousField!, selectedField!);
-
-          if (!whiteTurn) {
-            const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-            setPGN(`${PGN + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
-            setTurnCounter(turnCounter + 1);
-          } else {
-            const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-            setPGN(`${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
-          }
-
-          if (
-            (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
-            (selectedPiece.FEN === "p" && selectedField?.row === 1)
-          ) {
-            setModalHeading("Pawn Promotion");
-            setModalContent(promotionModalContent);
-            setModalCloseable(false);
-            openModal();
-          }
-
-          setLastMove({
-            from: fields.indexOf(previousField!),
-            to: fields.indexOf(selectedField!),
-            piece: selectedPiece.PGN
-          });
-          setHalfMove(0);
-          setFields(temp);
-          setSelectedPiece(null);
-          playCaptureSound();
-          setWhiteTurn(!whiteTurn);
+        if (
+          (typeof validMove === "object" && !validMove.valid) || 
+          (typeof validMove === "boolean" && !validMove)
+        ) {
+          blinkInvalidMove(selectedField);
+          return;
         }
+        
+        previousField.piece = undefined;
+        const previousFieldDiv = document.getElementById(previousField.column+previousField.row);
+        previousFieldDiv!.style.backgroundColor = selectedFieldColor;
+
+        setSelectedFieldColor("");
+        selectedField.piece = selectedPiece;
+
+        updatePgnCapture(selectedPiece, previousField, selectedField);
+
+        if (
+          (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
+          (selectedPiece.FEN === "p" && selectedField?.row === 1)
+        ) {
+          setModalHeading("Pawn Promotion");
+          setModalContent(promotionModalContent);
+          setModalCloseable(false);
+          openModal();
+        }
+
+        setLastMove({
+          from: fields.indexOf(previousField!),
+          to: fields.indexOf(selectedField!),
+          piece: selectedPiece.PGN
+        });
+        setHalfMove(0);
+        setFields(temp);
+        setSelectedPiece(null);
+        playCaptureSound();
+        setWhiteTurn(!whiteTurn);
       }
     }
   };

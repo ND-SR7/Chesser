@@ -20,7 +20,7 @@ export const isValidMove = (
   movingTo: Field,
   selectedPiece: Piece,
   playerSide: sideString,
-  lastMove: LastMove,
+  lastMove: LastMove | undefined,
   castling: boolean[],
   updateCastling: React.Dispatch<React.SetStateAction<boolean[]>>
 ): boolean | ValidMove => {
