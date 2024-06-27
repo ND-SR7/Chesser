@@ -13,7 +13,8 @@ export const getCheckStatus = (
   fields: Field[],
   movedPiecePosition: number,
   playerSide: SideString,
-  lastMove: LastMove | undefined
+  lastMove: LastMove | undefined,
+  response: boolean
 ): CheckStatus => {
   const movedPiece = fields[movedPiecePosition].piece!;
   const movedPieceColor = movedPiece.id.charAt(1);
@@ -47,11 +48,6 @@ export const getCheckStatus = (
   fields.forEach((field, fromIndex) => {
     const piece = field.piece;
     if (piece?.id.charAt(1) === movedPieceColor) {
-      const addValidMoves = (toIndex: number) => {
-        if (fields[toIndex].piece === undefined || fields[toIndex].piece?.id.charAt(1) !== movedPieceColor) {
-          addAttackedField(toIndex);
-        }
-      };
 
       const moveRook = (fromIndex: number) => {
         const moves = [-8, 8, -1, 1];
@@ -63,7 +59,7 @@ export const getCheckStatus = (
             if (tempPosition < 0 || tempPosition >= 64) break;
             if (move === -1 && tempPosition % 8 === 7) break;
             if (move === 1 && tempPosition % 8 === 0) break;
-            addValidMoves(tempPosition);
+            addAttackedField(tempPosition);
             if (fields[tempPosition].piece) break;
           }
         });
@@ -79,7 +75,7 @@ export const getCheckStatus = (
             if (tempPosition < 0 || tempPosition >= 64) break;
             if ((move === -9 || move === 7) && tempPosition % 8 === 7) break;
             if ((move === -7 || move === 9) && tempPosition % 8 === 0) break;
-            addValidMoves(tempPosition);
+            addAttackedField(tempPosition);
             if (fields[tempPosition].piece) break;
           }
         });
@@ -94,7 +90,7 @@ export const getCheckStatus = (
             const fromRow = Math.floor(fromIndex / 8);
             const toRow = Math.floor(tempPosition / 8);
             if (Math.abs(fromRow - toRow) <= 2) {
-              addValidMoves(tempPosition);
+              addAttackedField(tempPosition);
             }
           }
         });
@@ -106,7 +102,7 @@ export const getCheckStatus = (
         moves.forEach((move) => {
           const tempPosition = fromIndex + move;
           if (tempPosition >= 0 && tempPosition < 64) {
-            addValidMoves(tempPosition);
+            addAttackedField(tempPosition);
           }
         });
       };
@@ -116,10 +112,10 @@ export const getCheckStatus = (
         const moveUpRight = -7 * (pieceColor === "w" ? 1 : -1);
 
         if (fromIndex + moveUpLeft >= 0 && fromIndex + moveUpLeft < 64) {
-          addValidMoves(fromIndex + moveUpLeft);
+          addAttackedField(fromIndex + moveUpLeft);
         }
         if (fromIndex + moveUpRight >= 0 && fromIndex + moveUpRight < 64) {
-          addValidMoves(fromIndex + moveUpRight);
+          addAttackedField(fromIndex + moveUpRight);
         }
       };
 
@@ -199,34 +195,45 @@ export const getCheckStatus = (
       }
     });
 
+    let pieceFound = false;
+    checkFields.forEach(field => {
+      if (field.piece !== undefined)
+        pieceFound = true;
+    });
+
     // if no piece checking in direction, check knight jumps
-    if (checkFields.length === 0) {
+    if (!pieceFound) {
       knightJumps.forEach(jump => {
         const field = fields[kingPosition + jump];
         if (field !== undefined && field.piece?.PGN === "N" && field.piece.id.charAt(1) === movedPieceColor) {
           checkFields.push(fields[kingPosition + jump]);
+          pieceFound = true;
         }
       });
     }
 
     // this should never happen
-    if (checkFields.length === 0) {
+    if (!pieceFound) {
       console.error("King is checked but no checking pieces found");
       return checkStatus;
     }
 
-    // check if these is a valid move
-    let validMoveExists = false;
-    fields.forEach(field => {
-      if (field.piece === undefined || field.piece.id.charAt(1) === movedPieceColor) return;
+    // check if there is a valid move
+    // only if not checking the response to check
+    if (!response) {
+      let validMoveExists = false;
 
-      checkFields.forEach(checkField => {
-        const validMove = isValidMove(fields, field, checkField, field.piece!, playerSide, lastMove!);
-        if (validMove) validMoveExists = true;
+      fields.forEach(field => {
+        if (field.piece === undefined || field.piece.id.charAt(1) === movedPieceColor) return;
+
+        checkFields.forEach(checkField => {
+          const validMove = isValidMove(fields, field, checkField, field.piece!, playerSide, lastMove!);
+          if (validMove) validMoveExists = true;
+        });
       });
-    });
 
-    if (!validMoveExists) checkStatus.checkmate = true;
+      if (!validMoveExists) checkStatus.checkmate = true;
+    }
   }
 
   return checkStatus;

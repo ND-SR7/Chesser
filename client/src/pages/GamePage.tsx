@@ -32,6 +32,7 @@ import rookBlack from "../assets/rb.png";
 import { whiteSideSort } from "../services/PieceSortService";
 import { LastMove, ValidMove, isValidMove } from "../services/ValidMoveService";
 import { getCheckStatus } from "../services/CheckmateService";
+import { fieldToString } from "../services/StringService";
 
 type OutcomeString = "WIN" | "LOSS" | "DRAW" | "SURRENDER";
 
@@ -165,7 +166,7 @@ const GamePage = () => {
   const syncPgnAfterPromote = useCallback(() => {
     const indexOfPromotion = PGN.lastIndexOf("= ");
     const promotionFieldString = PGN.substring(indexOfPromotion - 2, indexOfPromotion).toUpperCase();
-    const promotionField = fields.find(field => field.column + field.row === promotionFieldString);
+    const promotionField = fields.find(field => fieldToString(field) === promotionFieldString);
     
     if (promotionField && promotionField.piece) {
       const updatedPGN = PGN.replace("= ", `=${promotionField.piece.PGN} `);
@@ -353,7 +354,7 @@ const GamePage = () => {
         // setting enPassant possibility
         const enPasasntFEN = fen.split(" ")[3].toUpperCase();
         if (enPasasntFEN !== "-") {
-          const enPassantField = fields.find(field => field.column + field.row === enPasasntFEN);
+          const enPassantField = fields.find(field => fieldToString(field) === enPasasntFEN);
           const toIndex = fields.indexOf(enPassantField!) + (whiteTurnFEN ? 8 : -8);
           const fromIndex = whiteTurnFEN ? toIndex - 16 : toIndex + 16;
           
@@ -526,15 +527,15 @@ const GamePage = () => {
   const updatePgnCastle = (selectedPiece: Piece, clickedOn: string, previousField: Field): string => {
     if (selectedPiece.id.charAt(1) === "w") {
       if (clickedOn === "G1" && previousField!.column === "E" && previousField!.row === 1) {
-          const rookField = fields.find(field => field.column + field.row === "H1");
-          const jumpField = fields.find(field => field.column + field.row === "F1");
+          const rookField = fields.find(field => fieldToString(field) === "H1");
+          const jumpField = fields.find(field => fieldToString(field) === "F1");
           jumpField!.piece = rookField!.piece;
           rookField!.piece = undefined;
 
           return `${PGN + turnCounter}. O-O `;
       } else if (clickedOn === "C1" && previousField!.column === "E" && previousField!.row === 1) {
-          const rookField = fields.find(field => field.column + field.row === "A1");
-          const jumpField = fields.find(field => field.column + field.row === "D1");
+          const rookField = fields.find(field => fieldToString(field) === "A1");
+          const jumpField = fields.find(field => fieldToString(field) === "D1");
           jumpField!.piece = rookField!.piece;
           rookField!.piece = undefined;
 
@@ -543,15 +544,15 @@ const GamePage = () => {
     } else if (selectedPiece.id.charAt(1) === "b") {
       setTurnCounter(turnCounter + 1);
       if (clickedOn === "G8" && previousField!.column === "E" && previousField!.row === 8) {
-        const rookField = fields.find(field => field.column + field.row === "H8");
-        const jumpField = fields.find(field => field.column + field.row === "F8");
+        const rookField = fields.find(field => fieldToString(field) === "H8");
+        const jumpField = fields.find(field => fieldToString(field) === "F8");
         jumpField!.piece = rookField!.piece;
         rookField!.piece = undefined;
 
         return `${PGN} O-O `;
       } else if (clickedOn === "C8" && previousField!.column === "E" && previousField!.row === 8) {
-        const rookField = fields.find(field => field.column + field.row === "A8");
-        const jumpField = fields.find(field => field.column + field.row === "D8");
+        const rookField = fields.find(field => fieldToString(field) === "A8");
+        const jumpField = fields.find(field => fieldToString(field) === "D8");
         jumpField!.piece = rookField!.piece;
         rookField!.piece = undefined;
 
@@ -621,6 +622,18 @@ const GamePage = () => {
       return temp.find(field => field.piece === selectedPiece && !fieldMatchesClick(field));
     };
 
+    const isCastlingMove = (field: Field): boolean => {
+      let isCastling = false;
+      
+      if (selectedPiece.FEN === "K") {
+        return fieldToString(field) === "G1" || fieldToString(field) === "C1";
+      } else if (selectedPiece.FEN === "k") {
+        return fieldToString(field) === "G8" || fieldToString(field) === "C8";
+      }
+
+      return isCastling;
+    }
+
     const selectedField = temp.find(field => fieldMatchesClick(field));
     const previousField = findPreviousField();
 
@@ -649,7 +662,7 @@ const GamePage = () => {
     if (typeof validMove === "object" && validMove.enPassantIndex !== -1) {
       pgnUpdate += updatePgnEnPassant(temp, validMove, selectedPiece, previousField, selectedField);
       playCaptureSound();
-    } else if (selectedPiece.PGN === "K" && (selectedField.column === "G" || selectedField.column === "C")) {
+    } else if (isCastlingMove(selectedField)) {
       pgnUpdate += updatePgnCastle(selectedPiece, clickedOn, previousField);
       playCastleSound();
     } else {
@@ -668,7 +681,7 @@ const GamePage = () => {
       pgnUpdate = updatePgnPromote(pgnUpdate);
     }
 
-    const checkStatus = getCheckStatus(fields, fields.indexOf(selectedField), playerSide, lastMove);
+    const checkStatus = getCheckStatus(fields, fields.indexOf(selectedField), playerSide, lastMove, false);
     if (checkStatus.checkmate) {
       pgnUpdate = updatePgnCheckmate(pgnUpdate);
       setInputDisabled(true);
@@ -776,7 +789,7 @@ const GamePage = () => {
           pgnUpdate = updatePgnPromote(pgnUpdate);
         }
 
-        const checkStatus = getCheckStatus(fields, fields.indexOf(selectedField), playerSide, lastMove);
+        const checkStatus = getCheckStatus(fields, fields.indexOf(selectedField), playerSide, lastMove, false);
         if (checkStatus.checkmate) {
           pgnUpdate = updatePgnCheckmate(pgnUpdate);
           setInputDisabled(true);
@@ -811,6 +824,7 @@ const GamePage = () => {
     setModalHeading("Game Over");
     setModalContent(endGameModalContent("SURRENDER"));
     setModalCloseable(true);
+    playGameEndSound()
     openModal();
   };
 

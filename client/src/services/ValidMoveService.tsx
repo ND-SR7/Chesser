@@ -3,6 +3,8 @@ import { SideString } from "../components/Board/Board";
 import Field from "../models/Field/Field";
 import Piece from "../models/Piece/Piece";
 
+import { fieldToString } from "./StringService";
+
 export type LastMove = {
   from: number;
   to: number;
@@ -72,7 +74,7 @@ export const isValidMove = (
 
     // disabling castling for used rook side
     if (moveValid) {
-      switch (fields[fromIndex].column + fields[fromIndex].row) {
+      switch (fieldToString(fields[fromIndex])) {
         case "H1":
           castling[1] = false;
           updateCastling(castling);
@@ -159,7 +161,6 @@ export const isValidMove = (
 
   const kingMovementValid = (fromIndex: number, toIndex: number, pieceColor: string): boolean => {
     const kingMoves = [-9, -8, -7, -1, 1, 7, 8, 9];
-    const castlingMoves = playerSide === "W" ? [2, -2] : [-2, 2]; // always checking kingside castling first
     const movedPiece = fields[fromIndex].piece;
 
     const disableCastling = () => {
@@ -176,38 +177,57 @@ export const isValidMove = (
     for (let move of kingMoves) {
       const tempPosition = fromIndex + move;
       if (tempPosition >= 0 && tempPosition < 64) {
-        if (tempPosition === toIndex) {
-          for (let i of kingMoves) {
-            if (fields[toIndex + i]?.piece?.PGN === "K" && fields[toIndex + i]?.piece?.id !== movedPiece?.id) {
-              return false;
+        const fromRow = Math.floor(fromIndex / 8);
+        const fromCol = fromIndex % 8;
+        const toRow = Math.floor(tempPosition / 8);
+        const toCol = tempPosition % 8;
+  
+        if (Math.abs(fromRow - toRow) <= 1 && Math.abs(fromCol - toCol) <= 1) {
+          if (tempPosition === toIndex) {
+            for (let i of kingMoves) {
+              if (fields[toIndex + i]?.piece?.PGN === "K" && fields[toIndex + i]?.piece?.id !== movedPiece?.id) {
+                return false;
+              }
             }
+            disableCastling();
+            return true;
           }
-          disableCastling();
-          return true;
         }
       }
     }
 
+    const isCastlePossible = (start: number, end: number): boolean => {
+      const step = start < end ? 1 : -1;
+
+      for (let i = start + step; i !== end; i += step) {
+        if (fields[i].piece !== undefined) return false;
+      }
+
+      return true;
+    };
+  
     // castling
     if (pieceColor === "w" && castling[0]) {
-      for (let i = 0; i < 2; i++) {
-        const tempPosition = fromIndex + castlingMoves[i];
-        if (tempPosition >= 0 && tempPosition < 64) {
-          if (tempPosition === toIndex && castling[1+i]) {
-            disableCastling();
-            return true;
-          }
-        }
+      const kingSidePossible = isCastlePossible(fromIndex, fromIndex + 2);
+      const queenSidePossible = isCastlePossible(fromIndex, fromIndex - 2);
+  
+      if (toIndex === fromIndex + 2 && kingSidePossible && castling[1]) {
+        disableCastling();
+        return true;
+      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[2]) {
+        disableCastling();
+        return true;
       }
     } else if (pieceColor === "b" && castling[3]) {
-      for (let i = 0; i < 2; i++) {
-        const tempPosition = fromIndex + castlingMoves[i];
-        if (tempPosition >= 0 && tempPosition < 64) {
-          if (tempPosition === toIndex && castling[4+i]) {
-            disableCastling();
-            return true;
-          }
-        }
+      const kingSidePossible = isCastlePossible(fromIndex, fromIndex + 2);
+      const queenSidePossible = isCastlePossible(fromIndex, fromIndex - 2);
+  
+      if (toIndex === fromIndex + 2 && kingSidePossible && castling[4]) {
+        disableCastling();
+        return true;
+      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[5]) {
+        disableCastling();
+        return true;
       }
     }
 
