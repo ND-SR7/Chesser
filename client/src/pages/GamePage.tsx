@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import Board, { sideString } from "../components/Board/Board";
+import Board, { SideString } from "../components/Board/Board";
 import Button from "../components/Shared/Button/Button";
 import Modal from "../components/Shared/Modal/Modal";
 import TurnDisplay from "../components/Board/TurnDisplay/TurnDisplay";
 
-import FieldModel from "../models/Field/Field";
-import PieceModel from "../models/Piece/Piece";
+import Field from "../models/Field/Field";
+import Piece from "../models/Piece/Piece";
 
 import useSound from "use-sound";
 import moveSound from "../sounds/move.mp3";
@@ -14,6 +14,7 @@ import checkSound from "../sounds/move-check.mp3";
 import captureSound from "../sounds/capture.mp3";
 import castleSound from "../sounds/castle.mp3";
 import promoteSound from "../sounds/promote.mp3";
+import gameEndSound from "../sounds/game-end.mp3";
 
 import bishopWhite from "../assets/bw.png";
 import kingWhite from "../assets/kw.png";
@@ -30,11 +31,12 @@ import rookBlack from "../assets/rb.png";
 
 import { whiteSideSort } from "../services/PieceSortService";
 import { LastMove, ValidMove, isValidMove } from "../services/ValidMoveService";
+import { getCheckStatus } from "../services/CheckmateService";
 
-type outcomeString = "WIN" | "LOSS" | "DRAW" | "SURRENDER";
+type OutcomeString = "WIN" | "LOSS" | "DRAW" | "SURRENDER";
 
 const GamePage = () => {
-  const [fields, setFields] = useState<FieldModel[]>([
+  const [fields, setFields] = useState<Field[]>([
     {row: 8, column: "A"}, {row: 8, column: "B"}, {row: 8, column: "C"}, {row: 8, column: "D"},
     {row: 8, column: "E"}, {row: 8, column: "F"}, {row: 8, column: "G"}, {row: 8, column: "H"},
     {row: 7, column: "A"}, {row: 7, column: "B"}, {row: 7, column: "C"}, {row: 7, column: "D"},
@@ -53,7 +55,7 @@ const GamePage = () => {
     {row: 1, column: "E"}, {row: 1, column: "F"}, {row: 1, column: "G"}, {row: 1, column: "H"}
   ]);
 
-  const pieces: PieceModel[] = [
+  const pieces: Piece[] = [
     { id: "rw1", imgSrc: rookWhite, FEN: "R", PGN: "R" },
     { id: "nw1", imgSrc: knightWhite, FEN: "N", PGN: "N" },
     { id: "bw1", imgSrc: bishopWhite, FEN: "B", PGN: "B" },
@@ -93,11 +95,12 @@ const GamePage = () => {
   const [playCaptureSound] = useSound(captureSound);
   const [playCastleSound] = useSound(castleSound);
   const [playPromoteSound] = useSound(promoteSound);
+  const [playGameEndSound] = useSound(gameEndSound);
 
-  const [playerSide, setPlayerSide] = useState<sideString>("B");
+  const [playerSide, setPlayerSide] = useState<SideString>("B");
   const [whiteTurn, setWhiteTurn] = useState(true);
 
-  const [selectedPiece, setSelectedPiece] = useState<PieceModel | null>(null);
+  const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
   const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
 
   const [PGN, setPGN] = useState("");
@@ -114,8 +117,8 @@ const GamePage = () => {
   const whiteBtn: JSX.Element = <Button key="btnWhite" buttonType="button" label="White" onClick={() => setupBoard("W")} />
   const blackBtn: JSX.Element = <Button key="btnBlack" buttonType="button" label="Black" onClick={() => setupBoard("B")} />
   const fenInput = <input id="fenInput" key="fenInput" type="text" maxLength={87} size={60} />
-  const fenConfirmBtn = <Button key="importFenBtn" buttonType="button" label="Confirm" onClick={() => setupFEN()} />
-  const endGameModalContent = (outcome: outcomeString) => {
+  const fenConfirmBtn = <Button key="importFenBtn" buttonType="button" label="Confirm" onClick={() => importFEN()} />
+  const endGameModalContent = (outcome: OutcomeString) => {
     let outcomeMessage = "";
 
     switch(outcome) {
@@ -157,10 +160,27 @@ const GamePage = () => {
   const openModal = () => setModal(true);
   const closeModal = () => setModal(false);
 
+  // PGN is missing info after promotion
+  // used to correct it
+  const syncPgnAfterPromote = useCallback(() => {
+    const indexOfPromotion = PGN.lastIndexOf("= ");
+    const promotionFieldString = PGN.substring(indexOfPromotion - 2, indexOfPromotion).toUpperCase();
+    const promotionField = fields.find(field => field.column + field.row === promotionFieldString);
+    
+    if (promotionField && promotionField.piece) {
+      const updatedPGN = PGN.replace("= ", `=${promotionField.piece.PGN} `);
+      setPGN(updatedPGN);
+    }
+  }, [fields, PGN]);
+
   useEffect(() => {
-    setModalCloseable(false);
-    openModal();
-  }, []);
+    if (fields[0].piece === undefined && turnCounter === 1) {
+      setModalCloseable(false);
+      openModal();
+    } else {
+      syncPgnAfterPromote();
+    }
+  }, [fields, syncPgnAfterPromote, turnCounter]);
 
   const exportFEN = () => {
     const castlingFEN = (): string => {
@@ -240,7 +260,7 @@ const GamePage = () => {
   };
 
   // Test FEN: rnbqkbnr/pp1p1ppp/8/2pPp3/8/8/PPP1PPPP/RNBQKBNR w KQkq c6 0 3
-  const setupFEN = () => {
+  const importFEN = () => {
     const fenInputElement = document.getElementById("fenInput") as HTMLInputElement | null;
     const fen = fenInputElement?.value.trim() || "";
 
@@ -259,7 +279,7 @@ const GamePage = () => {
 
       for (let i = 0; i < boardFEN.length; i++) {
         const char = boardFEN[i];
-        let piece: PieceModel | undefined = undefined;
+        let piece: Piece | undefined = undefined;
 
         switch (char) {
           case "r":
@@ -354,7 +374,7 @@ const GamePage = () => {
     }
   };
 
-  const setupBoard = (playerSide: sideString) => {
+  const setupBoard = (playerSide: SideString) => {
     setPlayerSide(playerSide);
     setPieces();
     closeModal();
@@ -376,7 +396,7 @@ const GamePage = () => {
 
   // when two or more pieces of the same type can reach the same field
   // additional data is written to PGN to differentiate between them
-  const getPieceDisambiguation = (previousField: FieldModel, selectedField: FieldModel): string => {
+  const getPieceDisambiguation = (previousField: Field, selectedField: Field): string => {
     const piecePGN = selectedPiece!.PGN;
 
     const sameTypePieces = fields.filter(field => field.piece?.PGN === piecePGN &&
@@ -449,16 +469,15 @@ const GamePage = () => {
       }
     }
 
-    const updatedPGN = `${PGN.slice(0, PGN.length - 1)}=${promoteTo} `;
-    setPGN(updatedPGN);
-
     playPromoteSound();
     setFields(temp);
     closeModal();
   };
 
-  const boardClick = (clickedOn: PieceModel | string) => {
+  const boardClick = (clickedOn: Piece | string) => {
     const temp = [...fields];
+
+    syncPgnAfterPromote();
     
     if (typeof clickedOn === "string" && selectedPiece !== null) {
       handleFieldClick(temp, clickedOn);
@@ -469,7 +488,7 @@ const GamePage = () => {
     }
   };
 
-  const blinkInvalidMove = (selectedField: FieldModel) => {
+  const blinkInvalidMove = (selectedField: Field) => {
     const fieldDiv = document.getElementById(selectedField.column+selectedField.row);
       
       if (fieldDiv) {
@@ -488,7 +507,7 @@ const GamePage = () => {
       }
   };
 
-  const updatePgnEnPassant = (temp: FieldModel[], validMove: ValidMove, selectedPiece: PieceModel, previousField: FieldModel, selectedField: FieldModel) => {
+  const updatePgnEnPassant = (temp: Field[], validMove: ValidMove, selectedPiece: Piece, previousField: Field, selectedField: Field): string => {
     const enPassantField = temp[validMove.enPassantIndex];
     enPassantField.piece = undefined;
 
@@ -496,15 +515,15 @@ const GamePage = () => {
 
     if (!whiteTurn) {
       const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-      setPGN(`${PGN + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
       setTurnCounter(turnCounter + 1);
-    } else {
-      const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-      setPGN(`${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `);
+      return `${PGN + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `;
     }
+
+    const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
+    return `${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `;
   };
 
-  const updatePgnCastle = (selectedPiece: PieceModel, clickedOn: string, previousField: FieldModel) => {
+  const updatePgnCastle = (selectedPiece: Piece, clickedOn: string, previousField: Field): string => {
     if (selectedPiece.id.charAt(1) === "w") {
       if (clickedOn === "G1" && previousField!.column === "E" && previousField!.row === 1) {
           const rookField = fields.find(field => field.column + field.row === "H1");
@@ -512,66 +531,93 @@ const GamePage = () => {
           jumpField!.piece = rookField!.piece;
           rookField!.piece = undefined;
 
-          setPGN(`${PGN + turnCounter}. O-O `);
+          return `${PGN + turnCounter}. O-O `;
       } else if (clickedOn === "C1" && previousField!.column === "E" && previousField!.row === 1) {
           const rookField = fields.find(field => field.column + field.row === "A1");
           const jumpField = fields.find(field => field.column + field.row === "D1");
           jumpField!.piece = rookField!.piece;
           rookField!.piece = undefined;
 
-          setPGN(`${PGN + turnCounter}. O-O-O `);
+          return `${PGN + turnCounter}. O-O-O `;
       }
     } else if (selectedPiece.id.charAt(1) === "b") {
+      setTurnCounter(turnCounter + 1);
       if (clickedOn === "G8" && previousField!.column === "E" && previousField!.row === 8) {
         const rookField = fields.find(field => field.column + field.row === "H8");
         const jumpField = fields.find(field => field.column + field.row === "F8");
         jumpField!.piece = rookField!.piece;
         rookField!.piece = undefined;
 
-        setPGN(`${PGN} O-O `);
+        return `${PGN} O-O `;
       } else if (clickedOn === "C8" && previousField!.column === "E" && previousField!.row === 8) {
         const rookField = fields.find(field => field.column + field.row === "A8");
         const jumpField = fields.find(field => field.column + field.row === "D8");
         jumpField!.piece = rookField!.piece;
         rookField!.piece = undefined;
 
-        setPGN(`${PGN} O-O-O `);
+        return `${PGN} O-O-O `;
       }
     }
+    return "";
   };
 
-  const updatePgnMove = (selectedPiece: PieceModel, clickedOn: string, previousField: FieldModel, selectedField: FieldModel) => {
+  const updatePgnMove = (selectedPiece: Piece, clickedOn: string, previousField: Field, selectedField: Field): string => {
     const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
 
     if (!whiteTurn) {
-      setPGN(`${PGN + selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
       setTurnCounter(turnCounter + 1);
-    } else {
-      setPGN(`${PGN + turnCounter}. ${selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `);
+      return `${PGN + selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `;
     }
+
+    return `${PGN + turnCounter}. ${selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `;
   };
 
-  const updatePgnCapture = (selectedPiece: PieceModel, previousField: FieldModel, selectedField: FieldModel) => {
+  const updatePgnCapture = (selectedPiece: Piece, previousField: Field, selectedField: Field): string => {
     const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
 
     if (!whiteTurn) {
       const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField.column.toLowerCase();
-      setPGN(`${PGN + piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `);
       setTurnCounter(turnCounter + 1);
-    } else {
-      const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField.column.toLowerCase();
-      setPGN(`${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `);
+      return `${PGN + piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `;
     }
+
+    const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField.column.toLowerCase();
+    return `${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `;
   };
 
-  const handleFieldClick = (temp: FieldModel[], clickedOn: string) => {
+  const updatePgnPromote = (pgn: string): string => {
+    const promotionField = fields.find(field =>
+      (field.row === 8 && field.piece?.id.includes("pw")) ||
+      (field.row === 1 && field.piece?.id.includes("pb"))
+    );
+    
+    const promotedTo = promotionField!.piece!.PGN;
+    pgn = pgn.substring(0, pgn.length - 1);
+
+    return `${pgn}=${promotedTo} `;
+  };
+
+  const updatePgnCheck = (pgn: string): string => {
+    pgn = pgn.substring(0, pgn.length - 1);
+
+    return `${pgn}+ `;
+  };
+
+  const updatePgnCheckmate = (pgn: string): string => {
+    let updatedPGN = "";
+    playerSide === "W" ? updatedPGN = `${pgn}# 0-1` : updatedPGN = `${pgn}# 1-0`;
+    
+    return updatedPGN;
+  };
+
+  const handleFieldClick = (temp: Field[], clickedOn: string) => {
     if (selectedPiece === null) return;
 
-    const fieldMatchesClick = (field: FieldModel): boolean => {
+    const fieldMatchesClick = (field: Field): boolean => {
       return field.column === clickedOn.charAt(0) && field.row === Number.parseInt(clickedOn.charAt(1));
     };
 
-    const findPreviousField = (): FieldModel | undefined => {
+    const findPreviousField = (): Field | undefined => {
       return temp.find(field => field.piece === selectedPiece && !fieldMatchesClick(field));
     };
 
@@ -599,14 +645,15 @@ const GamePage = () => {
     previousFieldDiv!.style.backgroundColor = selectedFieldColor;
     setSelectedFieldColor("");
 
+    let pgnUpdate = "" 
     if (typeof validMove === "object" && validMove.enPassantIndex !== -1) {
-      updatePgnEnPassant(temp, validMove, selectedPiece, previousField, selectedField);
+      pgnUpdate += updatePgnEnPassant(temp, validMove, selectedPiece, previousField, selectedField);
       playCaptureSound();
     } else if (selectedPiece.PGN === "K" && (selectedField.column === "G" || selectedField.column === "C")) {
-      updatePgnCastle(selectedPiece, clickedOn, previousField);
+      pgnUpdate += updatePgnCastle(selectedPiece, clickedOn, previousField);
       playCastleSound();
     } else {
-      updatePgnMove(selectedPiece, clickedOn, previousField, selectedField);
+      pgnUpdate += updatePgnMove(selectedPiece, clickedOn, previousField, selectedField);
       playMoveSound();
     }
 
@@ -618,6 +665,21 @@ const GamePage = () => {
       setModalContent(promotionModalContent);
       setModalCloseable(false);
       openModal();
+      pgnUpdate = updatePgnPromote(pgnUpdate);
+    }
+
+    const checkStatus = getCheckStatus(fields, fields.indexOf(selectedField), playerSide, lastMove);
+    if (checkStatus.checkmate) {
+      pgnUpdate = updatePgnCheckmate(pgnUpdate);
+      setInputDisabled(true);
+      setModalHeading("Game Over");
+      setModalContent(endGameModalContent("LOSS"));
+      setModalCloseable(true);
+      openModal();
+      playGameEndSound();
+    } else if (checkStatus.check) {
+      pgnUpdate = updatePgnCheck(pgnUpdate);
+      playCheckSound();
     }
 
     if (selectedPiece.PGN === "") {
@@ -633,10 +695,11 @@ const GamePage = () => {
     });
     setFields(temp);
     setSelectedPiece(null);
+    setPGN(pgnUpdate);
     setWhiteTurn(!whiteTurn);
   };
 
-  const handlePieceSelection = (temp: FieldModel[], clickedOn: PieceModel) => {
+  const handlePieceSelection = (temp: Field[], clickedOn: Piece) => {
     if (whiteTurn !== (clickedOn.id.charAt(1) === "w")) return;
       
       setSelectedPiece(clickedOn);
@@ -647,7 +710,7 @@ const GamePage = () => {
       fieldDiv!.style.backgroundColor = "gold";
   };
 
-  const handlePieceClick = (temp: FieldModel[], clickedOn: PieceModel) => {
+  const handlePieceClick = (temp: Field[], clickedOn: Piece) => {
     if (selectedPiece === null) return;
 
     if (clickedOn === selectedPiece) {
@@ -677,7 +740,7 @@ const GamePage = () => {
         const previousField = temp.find(field => field.piece === selectedPiece);
         const selectedField = temp.find(field => field.piece === clickedOn);
 
-        if (previousField == undefined || selectedField === undefined) return;
+        if (previousField === undefined || selectedField === undefined) return;
         
         const validMove = isValidMove(
           fields, previousField, selectedField, selectedPiece, playerSide, lastMove, castling, setCastling
@@ -698,7 +761,9 @@ const GamePage = () => {
         setSelectedFieldColor("");
         selectedField.piece = selectedPiece;
 
-        updatePgnCapture(selectedPiece, previousField, selectedField);
+        let pgnUpdate = "";
+        pgnUpdate += updatePgnCapture(selectedPiece, previousField, selectedField);
+        playCaptureSound();
 
         if (
           (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
@@ -708,6 +773,21 @@ const GamePage = () => {
           setModalContent(promotionModalContent);
           setModalCloseable(false);
           openModal();
+          pgnUpdate = updatePgnPromote(pgnUpdate);
+        }
+
+        const checkStatus = getCheckStatus(fields, fields.indexOf(selectedField), playerSide, lastMove);
+        if (checkStatus.checkmate) {
+          pgnUpdate = updatePgnCheckmate(pgnUpdate);
+          setInputDisabled(true);
+          setModalHeading("Game Over");
+          setModalContent(endGameModalContent("LOSS"));
+          setModalCloseable(true);
+          openModal();
+          playGameEndSound();
+        } else if (checkStatus.check) {
+          pgnUpdate = updatePgnCheck(pgnUpdate);
+          playCheckSound();
         }
 
         setLastMove({
@@ -718,7 +798,7 @@ const GamePage = () => {
         setHalfMove(0);
         setFields(temp);
         setSelectedPiece(null);
-        playCaptureSound();
+        setPGN(pgnUpdate);
         setWhiteTurn(!whiteTurn);
       }
     }
@@ -734,7 +814,7 @@ const GamePage = () => {
     openModal();
   };
 
-  const importFEN = () => {
+  const inputFEN = () => {
     setModalHeading("Paste FEN");
     setModalContent([fenInput, fenConfirmBtn]);
     setModalCloseable(true);
@@ -762,7 +842,7 @@ const GamePage = () => {
 
       <Board playerSide={playerSide} fields={fields} boardClick={boardClick} disabled={inputDisabled} />
 
-      <Button buttonType="button" label="Import FEN" onClick={() => importFEN()} disabled={disableFenBtn} />
+      <Button buttonType="button" label="Import FEN" onClick={() => inputFEN()} disabled={disableFenBtn} />
       <br />
       <Button buttonType="button" label="Export FEN" onClick={() => displayFEN()} />
       <Button buttonType="button" label="Export PGN" onClick={() => displayPGN()} />
