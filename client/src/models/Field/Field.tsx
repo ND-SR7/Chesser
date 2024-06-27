@@ -1,10 +1,10 @@
 import Piece from "../Piece/Piece";
 
-export type columnString = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
+export type ColumnString = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
 
 type Field = {
   row: number;
-  column: columnString;
+  column: ColumnString;
   piece?: Piece;
 };
 

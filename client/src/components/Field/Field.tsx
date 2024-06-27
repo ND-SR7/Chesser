@@ -2,11 +2,11 @@ import PieceStyled from '../Piece/Piece.styled';
 import FieldStyled from './Field.styled';
 
 import Piece from '../../models/Piece/Piece';
-import { columnString } from '../../models/Field/Field';
+import { ColumnString } from '../../models/Field/Field';
 
 interface FieldProps {
   row: number;
-  column: columnString;
+  column: ColumnString;
   piece?: Piece;
   onClick: (clickedOn: Piece | string) => void;
 }

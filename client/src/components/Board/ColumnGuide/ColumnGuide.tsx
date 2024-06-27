@@ -1,9 +1,9 @@
-import { sideString } from "../Board"
+import { SideString } from "../Board"
 
 import ColumnGuideStyled from "./ColumnGuide.styled";
 
 interface ColumnGuideProps {
-  side: sideString;
+  side: SideString;
 }
 
 const ColumnGuide = ({side} : ColumnGuideProps) => {

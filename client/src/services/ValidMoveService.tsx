@@ -1,4 +1,4 @@
-import { sideString } from "../components/Board/Board";
+import { SideString } from "../components/Board/Board";
 
 import Field from "../models/Field/Field";
 import Piece from "../models/Piece/Piece";
@@ -19,7 +19,7 @@ export const isValidMove = (
   movingFrom: Field,
   movingTo: Field,
   selectedPiece: Piece,
-  playerSide: sideString,
+  playerSide: SideString,
   lastMove: LastMove | undefined,
   castling: boolean[],
   updateCastling: React.Dispatch<React.SetStateAction<boolean[]>>
@@ -143,9 +143,11 @@ export const isValidMove = (
       const tempPosition = fromIndex + move;
       if (tempPosition >= 0 && tempPosition < 64) {
         const fromRow = Math.floor(fromIndex / 8);
+        const fromCol = fromIndex % 8;
         const toRow = Math.floor(tempPosition / 8);
+        const toCol = tempPosition % 8;
 
-        if (Math.abs(fromRow - toRow) <= 2) {
+        if (Math.abs(fromRow - toRow) <= 2 && Math.abs(fromCol - toCol) <= 2) {
           if (tempPosition === toIndex) {
             return true;
           }
@@ -288,7 +290,7 @@ export const isValidMove = (
       }
     }
 
-    return {valid: false, enPassantIndex: -1};;
+    return {valid: false, enPassantIndex: -1};
   };
 
   const pieceColor = selectedPiece!.id.charAt(1);

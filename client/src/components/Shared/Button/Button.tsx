@@ -1,11 +1,11 @@
 import ButtonStyled, { DisabledStyle } from "./Button.styled";
 
-type buttonType = 'button' | 'submit' | 'reset';
+type ButtonType = 'button' | 'submit' | 'reset';
 
 interface ButtonProps {
   id?: string;
   label: string;
-  buttonType: buttonType;
+  buttonType: ButtonType;
   disabled?: boolean;
   onClick?: () => void;
 }
