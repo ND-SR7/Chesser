@@ -19,3 +19,25 @@
 /client/npm-debug.log*
 /client/yarn-debug.log*
 /client/yarn-error.log*
+
+# server misc
+/server/HELP.md
+/server/target/
+!/server/.mvn/wrapper/maven-wrapper.jar
+!/server/**/src/main/**/target/
+!/server/**/src/test/**/target/
+
+# server sts
+/server/.apt_generated
+/server/.classpath
+/server/.factorypath
+/server/.project
+/server/.settings
+/server/.springBeans
+/server/.sts4-cache
+
+# intelliJ idea
+/server/.idea
+/server/*.iws
+/server/*.iml
+/server/*.ipr
