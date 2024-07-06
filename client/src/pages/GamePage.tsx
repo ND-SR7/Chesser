@@ -175,7 +175,12 @@ const GamePage = () => {
   }, [fields, PGN]);
 
   useEffect(() => {
-    if (fields[0].piece === undefined && turnCounter === 1) {
+    let boardEmpty = true;
+    fields.forEach(field => {
+      if (field.piece !== undefined) boardEmpty = false;
+    });
+
+    if (boardEmpty) {
       setModalCloseable(false);
       openModal();
     } else {
@@ -610,9 +615,13 @@ const GamePage = () => {
 
   const updatePgnCheckmate = (pgn: string): string => {
     let updatedPGN = "";
-    playerSide === "W" ? updatedPGN = `${pgn.substring(0, pgn.length-1)}# 1-0` : updatedPGN = `${pgn.substring(0, pgn.length-1)}# 0-1`;
+    playerSide === "W" && whiteTurn ? updatedPGN = `${pgn.substring(0, pgn.length-1)}# 1-0` : updatedPGN = `${pgn.substring(0, pgn.length-1)}# 0-1`;
     
     return updatedPGN;
+  };
+
+  const updatePgnDraw = (pgn: string): string => {
+    return `${pgn.substring(0, pgn.length-1)} 1/2-1/2`;
   };
 
   const handleFieldClick = (temp: Field[], clickedOn: string) => {
@@ -690,7 +699,10 @@ const GamePage = () => {
       pgnUpdate = updatePgnCheckmate(pgnUpdate);
       setInputDisabled(true);
       setModalHeading("Game Over");
-      setModalContent(endGameModalContent("WIN"));
+      
+      if (playerSide === "W" && whiteTurn) setModalContent(endGameModalContent("WIN"));
+      else setModalContent(endGameModalContent("LOSS"));
+
       setModalCloseable(true);
       openModal();
       playGameEndSound();
@@ -698,7 +710,13 @@ const GamePage = () => {
       pgnUpdate = updatePgnCheck(pgnUpdate);
       playCheckSound();
     } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
-      // TODO: End game "DRAW" logic
+      pgnUpdate = updatePgnDraw(pgnUpdate);
+      setInputDisabled(true);
+      setModalHeading("Game Over");
+      setModalContent(endGameModalContent("DRAW"));
+      setModalCloseable(true);
+      openModal();
+      playGameEndSound();
     }
 
     if (selectedPiece.PGN === "") {
@@ -800,7 +818,10 @@ const GamePage = () => {
           pgnUpdate = updatePgnCheckmate(pgnUpdate);
           setInputDisabled(true);
           setModalHeading("Game Over");
-          setModalContent(endGameModalContent("WIN"));
+
+          if (playerSide === "W" && whiteTurn) setModalContent(endGameModalContent("WIN"));
+          else setModalContent(endGameModalContent("LOSS"));
+
           setModalCloseable(true);
           openModal();
           playGameEndSound();
@@ -808,7 +829,13 @@ const GamePage = () => {
           pgnUpdate = updatePgnCheck(pgnUpdate);
           playCheckSound();
         } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
-          // TODO: End game "DRAW" logic
+          pgnUpdate = updatePgnDraw(pgnUpdate);
+          setInputDisabled(true);
+          setModalHeading("Game Over");
+          setModalContent(endGameModalContent("DRAW"));
+          setModalCloseable(true);
+          openModal();
+          playGameEndSound();
         }
 
         setLastMove({

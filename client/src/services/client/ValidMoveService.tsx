@@ -161,7 +161,7 @@ export const isValidMove = (
     return false;
   };
 
-  const kingMovementValid = (fromIndex: number, toIndex: number, pieceColor: string): boolean => {
+  const kingMovementValid = (fromIndex: number, toIndex: number, pieceColor: string, attacked: boolean): boolean => {
     const kingMoves = [-9, -8, -7, -1, 1, 7, 8, 9];
     const movedPiece = fields[fromIndex].piece;
 
@@ -190,6 +190,7 @@ export const isValidMove = (
               if (fields[toIndex + i]?.piece?.PGN === "K" && fields[toIndex + i]?.piece?.id !== movedPiece?.id) {
                 return false;
               }
+              if (attacked) return false;
             }
             disableCastling();
             return true;
@@ -213,10 +214,10 @@ export const isValidMove = (
       const kingSidePossible = isCastlePossible(fromIndex, fromIndex + 2);
       const queenSidePossible = isCastlePossible(fromIndex, fromIndex - 2);
   
-      if (toIndex === fromIndex + 2 && kingSidePossible && castling[1]) {
+      if (toIndex === fromIndex + 2 && kingSidePossible && castling[1] && !attacked) {
         disableCastling();
         return true;
-      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[2]) {
+      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[2] && !attacked) {
         disableCastling();
         return true;
       }
@@ -224,10 +225,10 @@ export const isValidMove = (
       const kingSidePossible = isCastlePossible(fromIndex, fromIndex + 2);
       const queenSidePossible = isCastlePossible(fromIndex, fromIndex - 2);
   
-      if (toIndex === fromIndex + 2 && kingSidePossible && castling[4]) {
+      if (toIndex === fromIndex + 2 && kingSidePossible && castling[4] && !attacked) {
         disableCastling();
         return true;
-      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[5]) {
+      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[5] && !attacked) {
         disableCastling();
         return true;
       }
@@ -340,7 +341,7 @@ export const isValidMove = (
   } else if (selectedPiece!.PGN === "N") {
     return knightMovementValid(fromIndex, toIndex) && !gameState.kingAttacked;
   } else if (selectedPiece!.PGN === "K") {
-    return kingMovementValid(fromIndex, toIndex, pieceColor) && !gameState.kingAttacked;
+    return kingMovementValid(fromIndex, toIndex, pieceColor, gameState.kingAttacked);
   } else if (selectedPiece!.PGN === "") {
     return pawnMovementValid(fromIndex, toIndex, pieceColor, lastMove!, gameState.kingAttacked);
   }

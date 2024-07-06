@@ -2,3 +2,4 @@
 - double check - 2r2q1k/5pp1/4p3/8/1bp4N/5P1R/6P1/2R4K w - - 0 4
 - enPassant    - rnbqkbnr/pp1p1ppp/8/2pPp3/8/8/PPP1PPPP/RNBQKBNR w KQkq c6 0 3
 - castling     - r3k2r/pppbqppp/2np1n2/2b1p3/2B1P3/2NP1N2/PPPBQPPP/R3K2R w q - 8 10
+- draw         - 8/8/8/2k5/3R4/4K3/8/8 w - - 0 1
