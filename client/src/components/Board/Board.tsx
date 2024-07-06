@@ -6,7 +6,7 @@ import PieceModel from "../../models/Piece/Piece";
 import BoardStyled, { DisabledStyle } from "./Board.styled";
 import ColumnGuide from "./ColumnGuide/ColumnGuide";
 import Field from "../Field/Field";
-import { blackSideSort, whiteSideSort } from "../../services/PieceSortService";
+import { blackSideSort, whiteSideSort } from "../../services/client/PieceSortService";
 
 export type SideString = "W" | "B";
 

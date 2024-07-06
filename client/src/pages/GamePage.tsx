@@ -29,10 +29,10 @@ import pawnBlack from "../assets/pb.png";
 import queenBlack from "../assets/qb.png";
 import rookBlack from "../assets/rb.png";
 
-import { whiteSideSort } from "../services/PieceSortService";
-import { LastMove, ValidMove, isValidMove } from "../services/ValidMoveService";
-import { getCheckStatus } from "../services/CheckmateService";
-import { fieldToString } from "../services/StringService";
+import { whiteSideSort } from "../services/client/PieceSortService";
+import { LastMove, ValidMove, isValidMove } from "../services/client/ValidMoveService";
+import { getGameState } from "../services/server/GameStateService";
+import { fieldToString } from "../services/client/StringService";
 
 type OutcomeString = "WIN" | "LOSS" | "DRAW" | "SURRENDER";
 
@@ -183,17 +183,20 @@ const GamePage = () => {
     }
   }, [fields, syncPgnAfterPromote, turnCounter]);
 
-  const exportFEN = () => {
+  const exportFEN = (tempFields?: Field[] | undefined): string => {
+    let fenFields = fields;
+    if (tempFields !== undefined) fenFields = tempFields;
+    
     const castlingFEN = (): string => {
       let temp = "";
       
-      if (fields[60].piece?.FEN === "K" && castling[0]) {
-        if (fields[63].piece?.FEN === "R" && castling[1]) temp += "K";
-        if (fields[56].piece?.FEN === "R" && castling[2]) temp += "Q";
+      if (fenFields[60].piece?.FEN === "K" && castling[0]) {
+        if (fenFields[63].piece?.FEN === "R" && castling[1]) temp += "K";
+        if (fenFields[56].piece?.FEN === "R" && castling[2]) temp += "Q";
       }
-      if (fields[4].piece?.FEN === "k" && castling[3]) {
-        if (fields[7].piece?.FEN === "r" && castling[4]) temp += "k";
-        if (fields[0].piece?.FEN === "r" && castling[5]) temp += "q";
+      if (fenFields[4].piece?.FEN === "k" && castling[3]) {
+        if (fenFields[7].piece?.FEN === "r" && castling[4]) temp += "k";
+        if (fenFields[0].piece?.FEN === "r" && castling[5]) temp += "q";
       }
 
       if (temp === "") temp = "-";
@@ -211,19 +214,19 @@ const GamePage = () => {
 
       if (lastMove && enPassantPossible()) {
         const enPassantIndex = (lastMove.from + lastMove.to) / 2;
-        const enPassantField = fields[enPassantIndex];
+        const enPassantField = fenFields[enPassantIndex];
         return enPassantField.column.toLowerCase() + enPassantField.row;
       }
       return "-";
     };
 
-    fields.sort(whiteSideSort);
+    fenFields.sort(whiteSideSort);
 
     let fen = "";
     let emptySpaceCounter = 0;
     let newRowCounter = 0;
 
-    fields.forEach(field => {
+    fenFields.forEach(field => {
       if (field.piece) {
         if (emptySpaceCounter > 0) fen += emptySpaceCounter;
         fen += field.piece.FEN;
@@ -251,16 +254,17 @@ const GamePage = () => {
 
     fen = fen.substring(0, fen.length - 1);
 
-    whiteTurn ? fen += " w" : fen += " b";
+    // need to update turn part if checking game state
+    if (tempFields !== undefined) whiteTurn ? fen += " b" : fen += " w";
+    else whiteTurn ? fen += " w" : fen += " b";
 
     fen += castlingFEN();
     fen += enPassantFen();
     fen += ` ${halfMove} ${turnCounter}`;
 
-    return <p>{fen}</p>;
+    return fen;
   };
 
-  // Test FEN: rnbqkbnr/pp1p1ppp/8/2pPp3/8/8/PPP1PPPP/RNBQKBNR w KQkq c6 0 3
   const importFEN = () => {
     const fenInputElement = document.getElementById("fenInput") as HTMLInputElement | null;
     const fen = fenInputElement?.value.trim() || "";
@@ -606,7 +610,7 @@ const GamePage = () => {
 
   const updatePgnCheckmate = (pgn: string): string => {
     let updatedPGN = "";
-    playerSide === "W" ? updatedPGN = `${pgn}# 0-1` : updatedPGN = `${pgn}# 1-0`;
+    playerSide === "W" ? updatedPGN = `${pgn.substring(0, pgn.length-1)}# 1-0` : updatedPGN = `${pgn.substring(0, pgn.length-1)}# 0-1`;
     
     return updatedPGN;
   };
@@ -681,18 +685,20 @@ const GamePage = () => {
       pgnUpdate = updatePgnPromote(pgnUpdate);
     }
 
-    const checkStatus = getCheckStatus(fields, fields.indexOf(selectedField), playerSide, lastMove, false);
-    if (checkStatus.checkmate) {
+    const gameState = getGameState(exportFEN(temp));
+    if (gameState.mated) {
       pgnUpdate = updatePgnCheckmate(pgnUpdate);
       setInputDisabled(true);
       setModalHeading("Game Over");
-      setModalContent(endGameModalContent("LOSS"));
+      setModalContent(endGameModalContent("WIN"));
       setModalCloseable(true);
       openModal();
       playGameEndSound();
-    } else if (checkStatus.check) {
+    } else if (gameState.kingAttacked) {
       pgnUpdate = updatePgnCheck(pgnUpdate);
       playCheckSound();
+    } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
+      // TODO: End game "DRAW" logic
     }
 
     if (selectedPiece.PGN === "") {
@@ -789,18 +795,20 @@ const GamePage = () => {
           pgnUpdate = updatePgnPromote(pgnUpdate);
         }
 
-        const checkStatus = getCheckStatus(fields, fields.indexOf(selectedField), playerSide, lastMove, false);
-        if (checkStatus.checkmate) {
+        const gameState = getGameState(exportFEN(temp));
+        if (gameState.mated) {
           pgnUpdate = updatePgnCheckmate(pgnUpdate);
           setInputDisabled(true);
           setModalHeading("Game Over");
-          setModalContent(endGameModalContent("LOSS"));
+          setModalContent(endGameModalContent("WIN"));
           setModalCloseable(true);
           openModal();
           playGameEndSound();
-        } else if (checkStatus.check) {
+        } else if (gameState.kingAttacked) {
           pgnUpdate = updatePgnCheck(pgnUpdate);
           playCheckSound();
+        } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
+          // TODO: End game "DRAW" logic
         }
 
         setLastMove({

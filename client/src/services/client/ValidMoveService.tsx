@@ -1,9 +1,11 @@
-import { SideString } from "../components/Board/Board";
+import { SideString } from "../../components/Board/Board";
 
-import Field from "../models/Field/Field";
-import Piece from "../models/Piece/Piece";
+import Field from "../../models/Field/Field";
+import Piece from "../../models/Piece/Piece";
+import { getGameState } from "../server/GameStateService";
 
 import { fieldToString } from "./StringService";
+import { buildFen } from "./ValidMoveFenService";
 
 export type LastMove = {
   from: number;
@@ -234,7 +236,7 @@ export const isValidMove = (
     return false;
   };
 
-  const pawnMovementValid = (fromIndex: number, toIndex: number, pieceColor: string, lastMove: LastMove): ValidMove => {
+  const pawnMovementValid = (fromIndex: number, toIndex: number, pieceColor: string, lastMove: LastMove, kingAttacked: boolean): ValidMove => {
     const moveUp = -8 * playerSideMultiplier;
     const moveDown = 8 * playerSideMultiplier;
     const moveUpLeft = -9 * playerSideMultiplier;
@@ -265,46 +267,46 @@ export const isValidMove = (
     if (pieceColor === "w") {
       // move up
       if (toIndex === fromIndex + moveUp && fields[toIndex].piece === undefined) {
-        return {valid: true, enPassantIndex: -1};
+        return {valid: true && !kingAttacked, enPassantIndex: -1};
       }
       // move up two
       if (Math.floor(fromIndex / 8) === initialRow) {
         if (toIndex === fromIndex + 2 * moveUp && fields[toIndex].piece === undefined && fields[fromIndex + moveUp].piece === undefined) {
-          return {valid: true, enPassantIndex: -1};
+          return {valid: true && !kingAttacked, enPassantIndex: -1};
         }
       }
       // diagonal capturing
       if (toIndex === fromIndex + moveUpLeft || toIndex === fromIndex + moveUpRight) {
         if (fields[toIndex].piece) {
-          return {valid: true, enPassantIndex: -1};
+          return {valid: true && !kingAttacked, enPassantIndex: -1};
         }
       }
       // en passant
       if (Math.floor(fromIndex / 8) === enPassantRow) {
         if (toIndex === fromIndex + moveUpLeft || toIndex === fromIndex + moveUpRight) {
           if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove && toIndex === lastMove.to + moveUp) {
-            return {valid: true, enPassantIndex: lastMove.to};
+            return {valid: true && !kingAttacked, enPassantIndex: lastMove.to};
           }
         }
       }
     } else {
       if (toIndex === fromIndex + moveDown && fields[toIndex].piece === undefined) {
-        return {valid: true, enPassantIndex: -1};
+        return {valid: true && !kingAttacked, enPassantIndex: -1};
       }
       if (Math.floor(fromIndex / 8) === initialRow) {
         if (toIndex === fromIndex + 2 * moveDown && fields[toIndex].piece === undefined && fields[fromIndex + moveDown].piece === undefined) {
-          return {valid: true, enPassantIndex: -1};
+          return {valid: true && !kingAttacked, enPassantIndex: -1};
         }
       }
       if (toIndex === fromIndex + moveDownLeft || toIndex === fromIndex + moveDownRight) {
         if (fields[toIndex].piece) {
-          return {valid: true, enPassantIndex: -1};
+          return {valid: true && !kingAttacked, enPassantIndex: -1};
         }
       }
       if (Math.floor(fromIndex / 8) === enPassantRow) {
         if (toIndex === fromIndex + moveDownLeft || toIndex === fromIndex + moveDownRight) {
           if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove && toIndex === lastMove.to + moveDown) {
-            return {valid: true, enPassantIndex: lastMove.to};
+            return {valid: true && !kingAttacked, enPassantIndex: lastMove.to};
           }
         }
       }
@@ -315,18 +317,32 @@ export const isValidMove = (
 
   const pieceColor = selectedPiece!.id.charAt(1);
 
+  // checking if move reveals a check or is not a response to check
+  const temp = [...fields];
+  const fromPiece = temp[fromIndex].piece!;
+  const toPiece = temp[toIndex].piece;
+
+  temp[fromIndex].piece = undefined;
+  temp[toIndex].piece = fromPiece;
+
+  const fen = buildFen(temp, castling, lastMove, pieceColor === "w");
+  const gameState = getGameState(fen);
+
+  temp[fromIndex].piece = fromPiece;
+  temp[toIndex].piece = toPiece;
+
   if (selectedPiece!.PGN === "R") {
-    return rookMovementValid(fromIndex, toIndex);
+    return rookMovementValid(fromIndex, toIndex) && !gameState.kingAttacked;
   } else if (selectedPiece!.PGN === "B") {
-    return bishopMovementValid(fromIndex, toIndex);
+    return bishopMovementValid(fromIndex, toIndex) && !gameState.kingAttacked;
   } else if (selectedPiece!.PGN === "Q") {
-    return rookMovementValid(fromIndex, toIndex) || bishopMovementValid(fromIndex, toIndex);
+    return (rookMovementValid(fromIndex, toIndex) || bishopMovementValid(fromIndex, toIndex)) && !gameState.kingAttacked;
   } else if (selectedPiece!.PGN === "N") {
-    return knightMovementValid(fromIndex, toIndex);
+    return knightMovementValid(fromIndex, toIndex) && !gameState.kingAttacked;
   } else if (selectedPiece!.PGN === "K") {
-    return kingMovementValid(fromIndex, toIndex, pieceColor);
+    return kingMovementValid(fromIndex, toIndex, pieceColor) && !gameState.kingAttacked;
   } else if (selectedPiece!.PGN === "") {
-    return pawnMovementValid(fromIndex, toIndex, pieceColor, lastMove!);
+    return pawnMovementValid(fromIndex, toIndex, pieceColor, lastMove!, gameState.kingAttacked);
   }
   return false;
 };

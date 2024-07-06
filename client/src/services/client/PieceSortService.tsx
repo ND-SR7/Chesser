@@ -1,4 +1,4 @@
-import Field from "../models/Field/Field";
+import Field from "../../models/Field/Field";
 
 export const whiteSideSort = (a: Field, b: Field) => {
   if (a.row !== b.row) {
