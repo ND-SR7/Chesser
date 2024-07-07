@@ -181,12 +181,11 @@ const GamePage = () => {
     });
 
     if (boardEmpty) {
-      setModalCloseable(false);
-      openModal();
+      setupBoard("W");
     } else {
       syncPgnAfterPromote();
     }
-  }, [fields, syncPgnAfterPromote, turnCounter]);
+  });
 
   const exportFEN = (tempFields?: Field[] | undefined): string => {
     let fenFields = fields;
@@ -499,7 +498,7 @@ const GamePage = () => {
   };
 
   const blinkInvalidMove = (selectedField: Field) => {
-    const fieldDiv = document.getElementById(selectedField.column+selectedField.row);
+    const fieldDiv = document.getElementById(fieldToString(selectedField));
       
       if (fieldDiv) {
         let blinkCount = 0;
@@ -667,7 +666,7 @@ const GamePage = () => {
     selectedField.piece = selectedPiece;
     previousField.piece = undefined;
     
-    const previousFieldDiv = document.getElementById(previousField.column+previousField.row);
+    const previousFieldDiv = document.getElementById(fieldToString(previousField));
     previousFieldDiv!.style.backgroundColor = selectedFieldColor;
     setSelectedFieldColor("");
 
@@ -742,7 +741,7 @@ const GamePage = () => {
       setSelectedPiece(clickedOn);
 
       const pieceField = temp.find(field => field.piece === clickedOn);
-      const fieldDiv = document.getElementById(pieceField!.column+pieceField!.row);
+      const fieldDiv = document.getElementById(fieldToString(pieceField!));
       setSelectedFieldColor(fieldDiv!.style.backgroundColor);
       fieldDiv!.style.backgroundColor = "gold";
   };
@@ -754,7 +753,7 @@ const GamePage = () => {
       setSelectedPiece(null);
       
       const pieceField = temp.find(field => field.piece === clickedOn);
-      const fieldDiv = document.getElementById(pieceField!.column+pieceField!.row);
+      const fieldDiv = document.getElementById(fieldToString(pieceField!));
       fieldDiv!.style.backgroundColor = selectedFieldColor;
       setSelectedFieldColor("");
     } else if (clickedOn !== selectedPiece) {
@@ -764,8 +763,8 @@ const GamePage = () => {
 
         if (prevPieceField === undefined || nextPieceField === undefined) return;
 
-        const prevFieldDiv = document.getElementById(prevPieceField.column+prevPieceField.row);
-        const nextFieldDiv = document.getElementById(nextPieceField.column+nextPieceField.row);
+        const prevFieldDiv = document.getElementById(fieldToString(prevPieceField));
+        const nextFieldDiv = document.getElementById(fieldToString(nextPieceField));
 
         if (prevFieldDiv === null || nextFieldDiv === null) return;
         
@@ -792,7 +791,7 @@ const GamePage = () => {
         }
         
         previousField.piece = undefined;
-        const previousFieldDiv = document.getElementById(previousField.column+previousField.row);
+        const previousFieldDiv = document.getElementById(fieldToString(previousField));
         previousFieldDiv!.style.backgroundColor = selectedFieldColor;
 
         setSelectedFieldColor("");
