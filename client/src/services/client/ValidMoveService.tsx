@@ -349,22 +349,8 @@ export const isValidMove = (
     temp[fromIndex].piece = fromPiece;
     temp[toIndex].piece = toPiece;
 
-    if (!gameState.kingAttacked) {
-      if (selectedPiece.PGN === "K") disableCastling(pieceColor, castling, updateCastling);
-     
-      return validMove;
-    }
+    if (!gameState.kingAttacked) return validMove;
   }
   
   return false;
-};
-
-const disableCastling = (pieceColor: string, castling: boolean[], updateCastling: React.Dispatch<React.SetStateAction<boolean[]>>) => {
-  if (pieceColor === "w") {
-    castling[0] = false;
-    updateCastling(castling);
-  } else if (pieceColor === "b") {
-    castling[3] = false;
-    updateCastling(castling);
-  }
 };

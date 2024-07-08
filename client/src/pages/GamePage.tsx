@@ -33,6 +33,7 @@ import { whiteSideSort } from "../services/client/PieceSortService";
 import { LastMove, ValidMove, isValidMove } from "../services/client/ValidMoveService";
 import { getGameState } from "../services/server/GameStateService";
 import { fieldToString } from "../services/client/StringService";
+import { getCpuMove } from "../services/server/CPUMoveService";
 
 type OutcomeString = "WIN" | "LOSS" | "DRAW" | "SURRENDER";
 
@@ -537,35 +538,15 @@ const GamePage = () => {
   const updatePgnCastle = (selectedPiece: Piece, clickedOn: string, previousField: Field): string => {
     if (selectedPiece.id.charAt(1) === "w") {
       if (clickedOn === "G1" && previousField!.column === "E" && previousField!.row === 1) {
-          const rookField = fields.find(field => fieldToString(field) === "H1");
-          const jumpField = fields.find(field => fieldToString(field) === "F1");
-          jumpField!.piece = rookField!.piece;
-          rookField!.piece = undefined;
-
-          return `${PGN + turnCounter}. O-O `;
+        return `${PGN + turnCounter}. O-O `;
       } else if (clickedOn === "C1" && previousField!.column === "E" && previousField!.row === 1) {
-          const rookField = fields.find(field => fieldToString(field) === "A1");
-          const jumpField = fields.find(field => fieldToString(field) === "D1");
-          jumpField!.piece = rookField!.piece;
-          rookField!.piece = undefined;
-
-          return `${PGN + turnCounter}. O-O-O `;
+        return `${PGN + turnCounter}. O-O-O `;
       }
     } else if (selectedPiece.id.charAt(1) === "b") {
       setTurnCounter(turnCounter + 1);
       if (clickedOn === "G8" && previousField!.column === "E" && previousField!.row === 8) {
-        const rookField = fields.find(field => fieldToString(field) === "H8");
-        const jumpField = fields.find(field => fieldToString(field) === "F8");
-        jumpField!.piece = rookField!.piece;
-        rookField!.piece = undefined;
-
         return `${PGN} O-O `;
       } else if (clickedOn === "C8" && previousField!.column === "E" && previousField!.row === 8) {
-        const rookField = fields.find(field => fieldToString(field) === "A8");
-        const jumpField = fields.find(field => fieldToString(field) === "D8");
-        jumpField!.piece = rookField!.piece;
-        rookField!.piece = undefined;
-
         return `${PGN} O-O-O `;
       }
     }
@@ -625,6 +606,34 @@ const GamePage = () => {
     return `${pgn.substring(0, pgn.length-1)} 1/2-1/2`;
   };
 
+  const handleCastling = (clickedOn: string, previousField: Field) => {
+    if (selectedPiece!.id.charAt(1) === "w") {
+      if (clickedOn === "G1" && previousField.column === "E" && previousField.row === 1) {
+        const rookField = fields.find(field => fieldToString(field) === "H1");
+        const jumpField = fields.find(field => fieldToString(field) === "F1");
+        jumpField!.piece = rookField!.piece;
+        rookField!.piece = undefined;
+      } else if (clickedOn === "C1" && previousField.column === "E" && previousField.row === 1) {
+        const rookField = fields.find(field => fieldToString(field) === "A1");
+        const jumpField = fields.find(field => fieldToString(field) === "D1");
+        jumpField!.piece = rookField!.piece;
+        rookField!.piece = undefined;
+      }
+    } else if (selectedPiece!.id.charAt(1) === "b") {
+      if (clickedOn === "G8" && previousField.column === "E" && previousField.row === 8) {
+        const rookField = fields.find(field => fieldToString(field) === "H8");
+        const jumpField = fields.find(field => fieldToString(field) === "F8");
+        jumpField!.piece = rookField!.piece;
+        rookField!.piece = undefined;
+      } else if (clickedOn === "C8" && previousField.column === "E" && previousField.row === 8) {
+        const rookField = fields.find(field => fieldToString(field) === "A8");
+        const jumpField = fields.find(field => fieldToString(field) === "D8");
+        jumpField!.piece = rookField!.piece;
+        rookField!.piece = undefined;
+      }
+    }
+  };
+
   const handleFieldClick = (temp: Field[], clickedOn: string) => {
     if (selectedPiece === null) return;
 
@@ -637,13 +646,25 @@ const GamePage = () => {
     };
 
     const isCastlingMove = (field: Field): boolean => {
+      const disableCastling = (pieceFEN: string) => {
+        if (pieceFEN === "K") {
+          castling[0] = false;
+          setCastling(castling);
+        } else if (pieceFEN === "k") {
+          castling[3] = false;
+          setCastling(castling);
+        }
+      };
+
       let isCastling = false;
       
-      if (selectedPiece.FEN === "K") {
-        return fieldToString(field) === "G1" || fieldToString(field) === "C1";
-      } else if (selectedPiece.FEN === "k") {
-        return fieldToString(field) === "G8" || fieldToString(field) === "C8";
+      if (selectedPiece.FEN === "K" && castling[0]) {
+        isCastling = fieldToString(field) === "G1" || fieldToString(field) === "C1";
+      } else if (selectedPiece.FEN === "k" && castling[3]) {
+        isCastling = fieldToString(field) === "G8" || fieldToString(field) === "C8";
       }
+
+      if (isCastling) disableCastling(selectedPiece.FEN);
 
       return isCastling;
     }
@@ -677,6 +698,7 @@ const GamePage = () => {
       pgnUpdate += updatePgnEnPassant(temp, validMove, selectedPiece, previousField, selectedField);
       playCaptureSound();
     } else if (isCastlingMove(selectedField)) {
+      handleCastling(clickedOn, previousField);
       pgnUpdate += updatePgnCastle(selectedPiece, clickedOn, previousField);
       playCastleSound();
     } else {
@@ -737,6 +759,11 @@ const GamePage = () => {
     setSelectedPiece(null);
     setPGN(pgnUpdate);
     setWhiteTurn(!whiteTurn);
+
+    if (whiteTurn === (playerSide === "W")) {
+      const cpuMove = getCpuMove(exportFEN(temp), 3);
+      console.log(cpuMove)
+    }
   };
 
   const handlePieceSelection = (temp: Field[], clickedOn: Piece) => {
@@ -853,6 +880,11 @@ const GamePage = () => {
         setSelectedPiece(null);
         setPGN(pgnUpdate);
         setWhiteTurn(!whiteTurn);
+
+        if (whiteTurn === (playerSide === "W")) {
+          const cpuMove = getCpuMove(exportFEN(temp), 3);
+          console.log(cpuMove)
+        }
       }
     }
   };
