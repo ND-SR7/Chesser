@@ -187,9 +187,9 @@ export const isValidMove = (
         if (Math.abs(fromRow - toRow) <= 1 && Math.abs(fromCol - toCol) <= 1) {
           if (tempPosition === toIndex) {
             for (let i of kingMoves) {
-              if (fields[toIndex + i]?.piece?.PGN === "K" && fields[toIndex + i]?.piece?.id !== movedPiece?.id) {
+              if (fields[toIndex + i]?.piece?.PGN === "K" && fields[toIndex + i]?.piece?.id !== movedPiece?.id)
                 return false;
-              }
+
               if (attacked) return false;
             }
             disableCastling();
@@ -205,6 +205,20 @@ export const isValidMove = (
       for (let i = start + step; i !== end; i += step) {
         if (fields[i].piece !== undefined) return false;
       }
+
+      // checking if enemy piece is blocking castling
+      const temp = [...fields];
+
+      temp[fromIndex].piece = undefined;
+      temp[start + step].piece = movedPiece;
+
+      const fen = buildFen(temp, castling, lastMove, pieceColor === "w");
+      const gameState = getGameState(fen);
+
+      temp[fromIndex].piece = movedPiece;
+      temp[start + step].piece = undefined;
+
+      if (gameState.kingAttacked) return false;
 
       return true;
     };
@@ -345,5 +359,6 @@ export const isValidMove = (
   } else if (selectedPiece!.PGN === "") {
     return pawnMovementValid(fromIndex, toIndex, pieceColor, lastMove!, gameState.kingAttacked);
   }
+  
   return false;
 };
