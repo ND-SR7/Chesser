@@ -161,19 +161,9 @@ export const isValidMove = (
     return false;
   };
 
-  const kingMovementValid = (fromIndex: number, toIndex: number, pieceColor: string, attacked: boolean): boolean => {
+  const kingMovementValid = (fromIndex: number, toIndex: number, pieceColor: string): boolean => {
     const kingMoves = [-9, -8, -7, -1, 1, 7, 8, 9];
     const movedPiece = fields[fromIndex].piece;
-
-    const disableCastling = () => {
-      if (pieceColor === "w") {
-        castling[0] = false;
-        updateCastling(castling);
-      } else if (pieceColor === "b") {
-        castling[3] = false;
-        updateCastling(castling);
-      }
-    };
 
     // basic movement
     for (let move of kingMoves) {
@@ -187,12 +177,10 @@ export const isValidMove = (
         if (Math.abs(fromRow - toRow) <= 1 && Math.abs(fromCol - toCol) <= 1) {
           if (tempPosition === toIndex) {
             for (let i of kingMoves) {
-              if (fields[toIndex + i]?.piece?.PGN === "K" && fields[toIndex + i]?.piece?.id !== movedPiece?.id)
+              if (fields[toIndex + i]?.piece?.PGN === "K" && fields[toIndex + i]?.piece?.id !== movedPiece?.id) {
                 return false;
-
-              if (attacked) return false;
+              }
             }
-            disableCastling();
             return true;
           }
         }
@@ -228,22 +216,18 @@ export const isValidMove = (
       const kingSidePossible = isCastlePossible(fromIndex, fromIndex + 2);
       const queenSidePossible = isCastlePossible(fromIndex, fromIndex - 2);
   
-      if (toIndex === fromIndex + 2 && kingSidePossible && castling[1] && !attacked) {
-        disableCastling();
+      if (toIndex === fromIndex + 2 && kingSidePossible && castling[1]) {
         return true;
-      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[2] && !attacked) {
-        disableCastling();
+      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[2]) {
         return true;
       }
     } else if (pieceColor === "b" && castling[3]) {
       const kingSidePossible = isCastlePossible(fromIndex, fromIndex + 2);
       const queenSidePossible = isCastlePossible(fromIndex, fromIndex - 2);
   
-      if (toIndex === fromIndex + 2 && kingSidePossible && castling[4] && !attacked) {
-        disableCastling();
+      if (toIndex === fromIndex + 2 && kingSidePossible && castling[4]) {
         return true;
-      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[5] && !attacked) {
-        disableCastling();
+      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[5]) {
         return true;
       }
     }
@@ -251,7 +235,7 @@ export const isValidMove = (
     return false;
   };
 
-  const pawnMovementValid = (fromIndex: number, toIndex: number, pieceColor: string, lastMove: LastMove, kingAttacked: boolean): ValidMove => {
+  const pawnMovementValid = (fromIndex: number, toIndex: number, pieceColor: string, lastMove: LastMove): ValidMove => {
     const moveUp = -8 * playerSideMultiplier;
     const moveDown = 8 * playerSideMultiplier;
     const moveUpLeft = -9 * playerSideMultiplier;
@@ -282,46 +266,46 @@ export const isValidMove = (
     if (pieceColor === "w") {
       // move up
       if (toIndex === fromIndex + moveUp && fields[toIndex].piece === undefined) {
-        return {valid: true && !kingAttacked, enPassantIndex: -1};
+        return {valid: true, enPassantIndex: -1};
       }
       // move up two
       if (Math.floor(fromIndex / 8) === initialRow) {
         if (toIndex === fromIndex + 2 * moveUp && fields[toIndex].piece === undefined && fields[fromIndex + moveUp].piece === undefined) {
-          return {valid: true && !kingAttacked, enPassantIndex: -1};
+          return {valid: true, enPassantIndex: -1};
         }
       }
       // diagonal capturing
       if (toIndex === fromIndex + moveUpLeft || toIndex === fromIndex + moveUpRight) {
         if (fields[toIndex].piece) {
-          return {valid: true && !kingAttacked, enPassantIndex: -1};
+          return {valid: true, enPassantIndex: -1};
         }
       }
       // en passant
       if (Math.floor(fromIndex / 8) === enPassantRow) {
         if (toIndex === fromIndex + moveUpLeft || toIndex === fromIndex + moveUpRight) {
           if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove && toIndex === lastMove.to + moveUp) {
-            return {valid: true && !kingAttacked, enPassantIndex: lastMove.to};
+            return {valid: true, enPassantIndex: lastMove.to};
           }
         }
       }
     } else {
       if (toIndex === fromIndex + moveDown && fields[toIndex].piece === undefined) {
-        return {valid: true && !kingAttacked, enPassantIndex: -1};
+        return {valid: true, enPassantIndex: -1};
       }
       if (Math.floor(fromIndex / 8) === initialRow) {
         if (toIndex === fromIndex + 2 * moveDown && fields[toIndex].piece === undefined && fields[fromIndex + moveDown].piece === undefined) {
-          return {valid: true && !kingAttacked, enPassantIndex: -1};
+          return {valid: true, enPassantIndex: -1};
         }
       }
       if (toIndex === fromIndex + moveDownLeft || toIndex === fromIndex + moveDownRight) {
         if (fields[toIndex].piece) {
-          return {valid: true && !kingAttacked, enPassantIndex: -1};
+          return {valid: true, enPassantIndex: -1};
         }
       }
       if (Math.floor(fromIndex / 8) === enPassantRow) {
         if (toIndex === fromIndex + moveDownLeft || toIndex === fromIndex + moveDownRight) {
           if (lastMove.piece === "" && lastMove.to === lastMove.from + enPassantMove && toIndex === lastMove.to + moveDown) {
-            return {valid: true && !kingAttacked, enPassantIndex: lastMove.to};
+            return {valid: true, enPassantIndex: lastMove.to};
           }
         }
       }
@@ -331,34 +315,57 @@ export const isValidMove = (
   };
 
   const pieceColor = selectedPiece!.id.charAt(1);
-
-  // checking if move reveals a check or is not a response to check
-  const temp = [...fields];
-  const fromPiece = temp[fromIndex].piece!;
-  const toPiece = temp[toIndex].piece;
-
-  temp[fromIndex].piece = undefined;
-  temp[toIndex].piece = fromPiece;
-
-  const fen = buildFen(temp, castling, lastMove, pieceColor === "w");
-  const gameState = getGameState(fen);
-
-  temp[fromIndex].piece = fromPiece;
-  temp[toIndex].piece = toPiece;
+  let validMove: boolean | ValidMove = false;
 
   if (selectedPiece!.PGN === "R") {
-    return rookMovementValid(fromIndex, toIndex) && !gameState.kingAttacked;
+    validMove = rookMovementValid(fromIndex, toIndex);
   } else if (selectedPiece!.PGN === "B") {
-    return bishopMovementValid(fromIndex, toIndex) && !gameState.kingAttacked;
+    validMove = bishopMovementValid(fromIndex, toIndex);
   } else if (selectedPiece!.PGN === "Q") {
-    return (rookMovementValid(fromIndex, toIndex) || bishopMovementValid(fromIndex, toIndex)) && !gameState.kingAttacked;
+    validMove = rookMovementValid(fromIndex, toIndex) || bishopMovementValid(fromIndex, toIndex);
   } else if (selectedPiece!.PGN === "N") {
-    return knightMovementValid(fromIndex, toIndex) && !gameState.kingAttacked;
+    validMove = knightMovementValid(fromIndex, toIndex);
   } else if (selectedPiece!.PGN === "K") {
-    return kingMovementValid(fromIndex, toIndex, pieceColor, gameState.kingAttacked);
+    validMove = kingMovementValid(fromIndex, toIndex, pieceColor);
   } else if (selectedPiece!.PGN === "") {
-    return pawnMovementValid(fromIndex, toIndex, pieceColor, lastMove!, gameState.kingAttacked);
+    validMove = pawnMovementValid(fromIndex, toIndex, pieceColor, lastMove!);
+  }
+
+  // checking if move reveals a check or is not a response to check
+  if (
+    (typeof validMove === "object" && validMove.valid) || 
+    (typeof validMove === "boolean" && validMove)
+  ) {
+    const temp = [...fields];
+    const fromPiece = temp[fromIndex].piece!;
+    const toPiece = temp[toIndex].piece;
+
+    temp[fromIndex].piece = undefined;
+    temp[toIndex].piece = fromPiece;
+
+    const fen = buildFen(temp, castling, lastMove, pieceColor === "w");
+    const gameState = getGameState(fen);
+
+    temp[fromIndex].piece = fromPiece;
+    temp[toIndex].piece = toPiece;
+
+
+    if (!gameState.kingAttacked) {
+      if (selectedPiece.PGN === "K") disableCastling(pieceColor, castling, updateCastling);
+     
+      return validMove;
+    }
   }
   
   return false;
+};
+
+const disableCastling = (pieceColor: string, castling: boolean[], updateCastling: React.Dispatch<React.SetStateAction<boolean[]>>) => {
+  if (pieceColor === "w") {
+    castling[0] = false;
+    updateCastling(castling);
+  } else if (pieceColor === "b") {
+    castling[3] = false;
+    updateCastling(castling);
+  }
 };
