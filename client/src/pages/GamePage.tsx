@@ -181,11 +181,12 @@ const GamePage = () => {
     });
 
     if (boardEmpty) {
-      setupBoard("W");
+      setModalCloseable(false);
+      openModal();
     } else {
       syncPgnAfterPromote();
     }
-  });
+  }, [fields, syncPgnAfterPromote, turnCounter]);
 
   const exportFEN = (tempFields?: Field[] | undefined): string => {
     let fenFields = fields;
@@ -408,14 +409,16 @@ const GamePage = () => {
   const getPieceDisambiguation = (previousField: Field, selectedField: Field): string => {
     const piecePGN = selectedPiece!.PGN;
 
-    const sameTypePieces = fields.filter(field => field.piece?.PGN === piecePGN &&
+    const sameTypePieceFields = fields.filter(field => field.piece?.PGN === piecePGN &&
       field.piece !== selectedPiece &&
-      field.piece.id.charAt(1) === selectedPiece!.id.charAt(1));
+      field.piece.id.charAt(1) === selectedPiece!.id.charAt(1)
+    );
 
-    const sameMovePieces = sameTypePieces.filter(field => {
+    const sameMovePieceFields = sameTypePieceFields.filter(field => {
       const validMove = isValidMove(
         fields, field, selectedField, selectedPiece!, playerSide, lastMove!, castling, setCastling
       );
+      console.log(validMove)
 
       if (typeof validMove === "object") return validMove.valid;
       
@@ -424,9 +427,9 @@ const GamePage = () => {
 
     let disambiguation = "";
     
-    if (piecePGN !== "" && sameMovePieces.length > 0) {
-      const sameColumn = sameMovePieces.some(field => field.column === previousField.column);
-      const sameRow = sameMovePieces.some(field => field.row === previousField.row);
+    if (piecePGN !== "" && sameMovePieceFields.length > 0) {
+      const sameColumn = sameMovePieceFields.some(field => field.column === previousField.column);
+      const sameRow = sameMovePieceFields.some(field => field.row === previousField.row);
 
       if (sameColumn && sameRow) {
         disambiguation += previousField.column.toLowerCase() + previousField.row;

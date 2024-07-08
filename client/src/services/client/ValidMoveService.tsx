@@ -349,7 +349,6 @@ export const isValidMove = (
     temp[fromIndex].piece = fromPiece;
     temp[toIndex].piece = toPiece;
 
-
     if (!gameState.kingAttacked) {
       if (selectedPiece.PGN === "K") disableCastling(pieceColor, castling, updateCastling);
      

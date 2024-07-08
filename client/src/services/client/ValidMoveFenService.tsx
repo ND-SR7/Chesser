@@ -36,13 +36,14 @@ export const buildFen = (fields: Field[], castling: boolean[], lastMove: LastMov
     return "-";
   };
 
-  fields.sort(whiteSideSort);
+  const temp = [...fields];
+  temp.sort(whiteSideSort);
 
   let fen = "";
   let emptySpaceCounter = 0;
   let newRowCounter = 0;
 
-  fields.forEach(field => {
+  temp.forEach(field => {
     if (field.piece) {
       if (emptySpaceCounter > 0) fen += emptySpaceCounter;
       fen += field.piece.FEN;
