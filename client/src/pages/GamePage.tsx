@@ -113,7 +113,7 @@ const GamePage = () => {
   const [castling, setCastling] = useState<boolean[]>([true, true, true, true, true, true]);
 
   const [inputDisabled, setInputDisabled] = useState(false);
-  const [disableFenBtn, setDisableFenBtn] = useState(false);
+  const [disableFenImportBtn, setDisableFenImportBtn] = useState(false);
 
   const whiteBtn: JSX.Element = <Button key="btnWhite" buttonType="button" label="White" onClick={() => setupBoard("W")} />
   const blackBtn: JSX.Element = <Button key="btnBlack" buttonType="button" label="Black" onClick={() => setupBoard("B")} />
@@ -377,7 +377,7 @@ const GamePage = () => {
         
         setFields(temp);
         closeModal();
-        setDisableFenBtn(true);
+        setDisableFenImportBtn(true);
       } catch (error) {
         console.error(error);
       }
@@ -418,7 +418,6 @@ const GamePage = () => {
       const validMove = isValidMove(
         fields, field, selectedField, selectedPiece!, playerSide, lastMove!, castling, setCastling
       );
-      console.log(validMove)
 
       if (typeof validMove === "object") return validMove.valid;
       
@@ -700,6 +699,7 @@ const GamePage = () => {
     if (gameState.mated) {
       pgnUpdate = updatePgnCheckmate(pgnUpdate);
       setInputDisabled(true);
+      setDisableFenImportBtn(true);
       setModalHeading("Game Over");
       
       if (playerSide === "W" && whiteTurn) setModalContent(endGameModalContent("WIN"));
@@ -714,6 +714,7 @@ const GamePage = () => {
     } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
       pgnUpdate = updatePgnDraw(pgnUpdate);
       setInputDisabled(true);
+      setDisableFenImportBtn(true);
       setModalHeading("Game Over");
       setModalContent(endGameModalContent("DRAW"));
       setModalCloseable(true);
@@ -819,6 +820,7 @@ const GamePage = () => {
         if (gameState.mated) {
           pgnUpdate = updatePgnCheckmate(pgnUpdate);
           setInputDisabled(true);
+          setDisableFenImportBtn(true);
           setModalHeading("Game Over");
 
           if (playerSide === "W" && whiteTurn) setModalContent(endGameModalContent("WIN"));
@@ -833,6 +835,7 @@ const GamePage = () => {
         } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
           pgnUpdate = updatePgnDraw(pgnUpdate);
           setInputDisabled(true);
+          setDisableFenImportBtn(true);
           setModalHeading("Game Over");
           setModalContent(endGameModalContent("DRAW"));
           setModalCloseable(true);
@@ -857,6 +860,7 @@ const GamePage = () => {
   const surrender = () => {
     playerSide === "W" ? setPGN(`${PGN}0-1`) : setPGN(`${PGN}1-0`);
     setInputDisabled(true);
+    setDisableFenImportBtn(true);
 
     setModalHeading("Game Over");
     setModalContent(endGameModalContent("SURRENDER"));
@@ -893,7 +897,7 @@ const GamePage = () => {
 
       <Board playerSide={playerSide} fields={fields} boardClick={boardClick} disabled={inputDisabled} />
 
-      <Button buttonType="button" label="Import FEN" onClick={() => inputFEN()} disabled={disableFenBtn} />
+      <Button buttonType="button" label="Import FEN" onClick={() => inputFEN()} disabled={disableFenImportBtn} />
       <br />
       <Button buttonType="button" label="Export FEN" onClick={() => displayFEN()} />
       <Button buttonType="button" label="Export PGN" onClick={() => displayPGN()} />
