@@ -761,8 +761,7 @@ const GamePage = () => {
     setWhiteTurn(!whiteTurn);
 
     if (whiteTurn === (playerSide === "W")) {
-      const cpuMove = getCpuMove(exportFEN(temp), 3);
-      console.log(cpuMove)
+      playCpuMove(3);
     }
   };
 
@@ -882,11 +881,22 @@ const GamePage = () => {
         setWhiteTurn(!whiteTurn);
 
         if (whiteTurn === (playerSide === "W")) {
-          const cpuMove = getCpuMove(exportFEN(temp), 3);
-          console.log(cpuMove)
+          playCpuMove(3);
         }
       }
     }
+  };
+
+  const playCpuMove = async (depth: number) => {
+    const fen = exportFEN(fields);
+
+    getCpuMove(fen, depth)
+      .then(cpuMove => {
+        console.log(cpuMove);
+      })
+      .catch(error => {
+        console.error("Error getting CPU move:", error);
+      });
   };
 
   const surrender = () => {
