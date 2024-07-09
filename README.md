@@ -13,8 +13,8 @@ Web platform for playing chess
 3. Run `npm start` to start the client app
 4. Navigate to /server
 5. Run `./mvnw spring-boot:run` to start the server app
+6. Access client app at `localhost:3000`
 
 ---
 # Known issues
-- Check not displayed after promotion
 - Clicking on invalid move at certain interval can color the field red

@@ -389,7 +389,7 @@ const GamePage = () => {
     setPlayerSide(playerSide);
     setPieces();
     closeModal();
-  }
+  };
 
   const setPieces = () => {
     const temp = [...fields];
@@ -483,7 +483,34 @@ const GamePage = () => {
 
     playPromoteSound();
     setFields(temp);
+    setWhiteTurn(!whiteTurn)
     closeModal();
+
+    // checking game state after promotion
+    // previously checked game state was with pawn on first/last row
+    const gameState = getGameState(exportFEN(temp));
+    if (gameState.mated) {
+      setInputDisabled(true);
+      setDisableFenImportBtn(true);
+      setModalHeading("Game Over");
+      
+      if (playerSide === "W" && whiteTurn) setModalContent(endGameModalContent("WIN"));
+      else setModalContent(endGameModalContent("LOSS"));
+
+      setModalCloseable(true);
+      openModal();
+      playGameEndSound();
+    } else if (gameState.kingAttacked) {
+      playCheckSound();
+    } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
+      setInputDisabled(true);
+      setDisableFenImportBtn(true);
+      setModalHeading("Game Over");
+      setModalContent(endGameModalContent("DRAW"));
+      setModalCloseable(true);
+      openModal();
+      playGameEndSound();
+    }
   };
 
   const boardClick = (clickedOn: Piece | string) => {
@@ -706,15 +733,30 @@ const GamePage = () => {
       playMoveSound();
     }
 
-    if (
-      (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
-      (selectedPiece.FEN === "p" && selectedField?.row === 1)
-    ) {
+    let fen = exportFEN(temp);
+    
+    const promotion = (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
+      (selectedPiece.FEN === "p" && selectedField?.row === 1);
+
+    if (promotion) {
       setModalHeading("Pawn Promotion");
       setModalContent(promotionModalContent);
       setModalCloseable(false);
       openModal();
       pgnUpdate = updatePgnPromote(pgnUpdate);
+      
+      // assuming queen is selected in promotion, for CPU move generation
+      // it is most likely queen, but also covers promotion to rook or bishop
+      // only knight promotion is not handled optimally
+      const fenParts = fen.split(" ");
+      const fenBoardLines = fenParts[0].split("/");
+
+      fenBoardLines[0] = fenBoardLines[0].replace("P", "Q");
+      fenBoardLines[7] = fenBoardLines[7].replace("p", "q");
+
+      fenParts[0] = fenBoardLines.join("/");
+      
+      fen = fenParts.join(" ");
     }
 
     const gameState = getGameState(exportFEN(temp));
@@ -758,10 +800,11 @@ const GamePage = () => {
     setFields(temp);
     setSelectedPiece(null);
     setPGN(pgnUpdate);
-    setWhiteTurn(!whiteTurn);
+    
+    if (!promotion) setWhiteTurn(!whiteTurn);
 
     if (whiteTurn === (playerSide === "W")) {
-      playCpuMove(3);
+      playCpuMove(3, fen);
     }
   };
 
@@ -831,15 +874,30 @@ const GamePage = () => {
         pgnUpdate += updatePgnCapture(selectedPiece, previousField, selectedField);
         playCaptureSound();
 
-        if (
-          (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
-          (selectedPiece.FEN === "p" && selectedField?.row === 1)
-        ) {
+        let fen = exportFEN(temp);
+
+        const promotion = (selectedPiece.FEN === "P" && selectedField?.row === 8) ||
+          (selectedPiece.FEN === "p" && selectedField?.row === 1);
+
+        if (promotion) {
           setModalHeading("Pawn Promotion");
           setModalContent(promotionModalContent);
           setModalCloseable(false);
           openModal();
           pgnUpdate = updatePgnPromote(pgnUpdate);
+          
+          // assuming queen is selected in promotion, for CPU move generation
+          // it is most likely queen, but also covers promotion to rook or bishop
+          // only knight promotion is not handled optimally
+          const fenParts = fen.split(" ");
+          const fenBoardLines = fenParts[0].split("/");
+    
+          fenBoardLines[0] = fenBoardLines[0].replace("P", "Q");
+          fenBoardLines[7] = fenBoardLines[7].replace("p", "q");
+
+          fenParts[0] = fenBoardLines.join("/");
+          
+          fen = fenParts.join(" ");
         }
 
         const gameState = getGameState(exportFEN(temp));
@@ -878,18 +936,17 @@ const GamePage = () => {
         setFields(temp);
         setSelectedPiece(null);
         setPGN(pgnUpdate);
-        setWhiteTurn(!whiteTurn);
+        
+        if (!promotion) setWhiteTurn(!whiteTurn);
 
         if (whiteTurn === (playerSide === "W")) {
-          playCpuMove(3);
+          playCpuMove(3, fen);
         }
       }
     }
   };
 
-  const playCpuMove = async (depth: number) => {
-    const fen = exportFEN(fields);
-
+  const playCpuMove = async (depth: number, fen: string) => {
     getCpuMove(fen, depth)
       .then(cpuMove => {
         console.log(cpuMove);

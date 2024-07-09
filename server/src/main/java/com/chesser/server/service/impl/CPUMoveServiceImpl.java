@@ -24,6 +24,10 @@ public class CPUMoveServiceImpl implements CPUMoveService {
         Side cpuSide = board.getSideToMove();
         Move bestMove = getBestMove(board, dto.getDepth(), cpuSide);
 
+        // after game ends, best move is null
+        if (bestMove == null)
+            return new CPUMove();
+
         CPUMove cpuMove = new CPUMove();
         cpuMove.setFrom(bestMove.getFrom().toString());
         cpuMove.setTo(bestMove.getTo().toString());
