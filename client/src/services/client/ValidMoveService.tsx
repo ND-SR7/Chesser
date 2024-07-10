@@ -213,21 +213,21 @@ export const isValidMove = (
   
     // castling
     if (pieceColor === "w" && castling[0]) {
-      const kingSidePossible = isCastlePossible(fromIndex, fromIndex + 2);
-      const queenSidePossible = isCastlePossible(fromIndex, fromIndex - 2);
+      const kingSidePossible = isCastlePossible(fromIndex, fromIndex + (2 * playerSideMultiplier));
+      const queenSidePossible = isCastlePossible(fromIndex, fromIndex - (2 * playerSideMultiplier));
   
-      if (toIndex === fromIndex + 2 && kingSidePossible && castling[1]) {
+      if (toIndex === fromIndex + (2 * playerSideMultiplier) && kingSidePossible && castling[1]) {
         return true;
-      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[2]) {
+      } else if (toIndex === fromIndex - (2 * playerSideMultiplier) && queenSidePossible && castling[2]) {
         return true;
       }
     } else if (pieceColor === "b" && castling[3]) {
-      const kingSidePossible = isCastlePossible(fromIndex, fromIndex + 2);
-      const queenSidePossible = isCastlePossible(fromIndex, fromIndex - 2);
+      const kingSidePossible = isCastlePossible(fromIndex, fromIndex + (2 * playerSideMultiplier));
+      const queenSidePossible = isCastlePossible(fromIndex, fromIndex - (2 * playerSideMultiplier));
   
-      if (toIndex === fromIndex + 2 && kingSidePossible && castling[4]) {
+      if (toIndex === fromIndex + (2 * playerSideMultiplier) && kingSidePossible && castling[4]) {
         return true;
-      } else if (toIndex === fromIndex - 2 && queenSidePossible && castling[5]) {
+      } else if (toIndex === fromIndex - (2 * playerSideMultiplier) && queenSidePossible && castling[5]) {
         return true;
       }
     }

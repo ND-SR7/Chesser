@@ -102,13 +102,13 @@ const GamePage = () => {
 
   const [playerSide, setPlayerSide] = useState<SideString>("B");
   const [whiteTurn, setWhiteTurn, whiteTurnRef] = useStateRef(true);
-  let cpuMoved = useRef(false);
+  const cpuMoved = useRef(false);
 
   const [selectedPiece, setSelectedPiece, selectedPieceRef] = useStateRef<Piece | null>(null);
   const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
 
-  const [PGN, setPGN] = useState("");
-  const [turnCounter, setTurnCounter] = useState(1);
+  const PGN = useRef("");
+  const turnCounter = useRef(1);
   const [halfMove, setHalfMove] = useState<number>(0);
   const [lastMove, setLastMove] = useState<LastMove>();
   // checking if castling is legal
@@ -167,15 +167,15 @@ const GamePage = () => {
   // PGN is missing info after promotion
   // used to correct it
   const syncPgnAfterPromote = useCallback(() => {
-    const indexOfPromotion = PGN.lastIndexOf("= ");
-    const promotionFieldString = PGN.substring(indexOfPromotion - 2, indexOfPromotion).toUpperCase();
+    const indexOfPromotion = PGN.current.lastIndexOf("= ");
+    const promotionFieldString = PGN.current.substring(indexOfPromotion - 2, indexOfPromotion).toUpperCase();
     const promotionField = fields.find(field => fieldToString(field) === promotionFieldString);
     
     if (promotionField && promotionField.piece) {
-      const updatedPGN = PGN.replace("= ", `=${promotionField.piece.PGN} `);
-      setPGN(updatedPGN);
+      const updatedPGN = PGN.current.replace("= ", `=${promotionField.piece.PGN} `);
+      PGN.current = updatedPGN;
     }
-  }, [fields, PGN]);
+  }, [fields]);
 
   useEffect(() => {
     let boardEmpty = true;
@@ -189,9 +189,9 @@ const GamePage = () => {
     } else {
       syncPgnAfterPromote();
     }
-  }, [fields, syncPgnAfterPromote, turnCounter]);
+  }, [fields, syncPgnAfterPromote]);
 
-  const exportFEN = (tempFields?: Field[] | undefined): string => {
+  const exportFEN = (tempFields?: Field[] | undefined, imported?: boolean): string => {
     let fenFields = fields;
     if (tempFields !== undefined) fenFields = tempFields;
     
@@ -263,12 +263,12 @@ const GamePage = () => {
     fen = fen.substring(0, fen.length - 1);
 
     // need to update turn part if checking game state
-    if (tempFields !== undefined) whiteTurnRef.current ? fen += " b" : fen += " w";
-    else whiteTurn ? fen += " w" : fen += " b";
+    if (tempFields !== undefined && !imported) whiteTurnRef.current ? fen += " b" : fen += " w";
+    else whiteTurnRef.current ? fen += " w" : fen += " b";
 
     fen += castlingFEN();
     fen += enPassantFen();
-    fen += ` ${halfMove} ${turnCounter}`;
+    fen += ` ${halfMove} ${turnCounter.current}`;
 
     return fen;
   };
@@ -376,11 +376,16 @@ const GamePage = () => {
         
         // setting half-move and turn counter
         setHalfMove(parseInt(fen.split(" ")[4]));
-        setTurnCounter(parseInt(fen.split(" ")[5]));
+        turnCounter.current = parseInt(fen.split(" ")[5]);
         
         setFields(temp);
         closeModal();
         setDisableFenImportBtn(true);
+
+        if (whiteTurnFEN !== (playerSide === "W")) {
+          playCpuMove(4, exportFEN(temp, true));
+          cpuMoved.current = true;
+        }
       } catch (error) {
         console.error(error);
       }
@@ -455,32 +460,32 @@ const GamePage = () => {
       const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 8);
       switch (promoteTo) {
         case "Q":
-          promotionField!.piece = {id: `qw${turnCounter}`, FEN: "Q", PGN: "Q", imgSrc: queenWhite}
+          promotionField!.piece = {id: `qw${turnCounter.current}`, FEN: "Q", PGN: "Q", imgSrc: queenWhite}
           break;
         case "N":
-          promotionField!.piece = {id: `nw${turnCounter}`, FEN: "N", PGN: "N", imgSrc: knightWhite}
+          promotionField!.piece = {id: `nw${turnCounter.current}`, FEN: "N", PGN: "N", imgSrc: knightWhite}
           break;
         case "R":
-          promotionField!.piece = {id: `rw${turnCounter}`, FEN: "R", PGN: "R", imgSrc: rookWhite}
+          promotionField!.piece = {id: `rw${turnCounter.current}`, FEN: "R", PGN: "R", imgSrc: rookWhite}
           break;
         case "B":
-          promotionField!.piece = {id: `bw${turnCounter}`, FEN: "B", PGN: "B", imgSrc: bishopWhite}
+          promotionField!.piece = {id: `bw${turnCounter.current}`, FEN: "B", PGN: "B", imgSrc: bishopWhite}
           break;
       }
     } else {
       const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 1);
       switch (promoteTo) {
         case "Q":
-          promotionField!.piece = {id: `qb${turnCounter}`, FEN: "q", PGN: "Q", imgSrc: queenBlack}
+          promotionField!.piece = {id: `qb${turnCounter.current}`, FEN: "q", PGN: "Q", imgSrc: queenBlack}
           break;
         case "N":
-          promotionField!.piece = {id: `nb${turnCounter}`, FEN: "n", PGN: "N", imgSrc: knightBlack}
+          promotionField!.piece = {id: `nb${turnCounter.current}`, FEN: "n", PGN: "N", imgSrc: knightBlack}
           break;
         case "R":
-          promotionField!.piece = {id: `rb${turnCounter}`, FEN: "r", PGN: "R", imgSrc: rookBlack}
+          promotionField!.piece = {id: `rb${turnCounter.current}`, FEN: "r", PGN: "R", imgSrc: rookBlack}
           break;
         case "B":
-          promotionField!.piece = {id: `bb${turnCounter}`, FEN: "b", PGN: "B", imgSrc: bishopBlack}
+          promotionField!.piece = {id: `bb${turnCounter.current}`, FEN: "b", PGN: "B", imgSrc: bishopBlack}
           break;
       }
     }
@@ -556,29 +561,29 @@ const GamePage = () => {
 
     const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
 
-    if (!whiteTurn) {
+    if (!whiteTurnRef.current) {
       const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-      setTurnCounter(turnCounter + 1);
-      return `${PGN + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `;
+      turnCounter.current = turnCounter.current + 1;
+      return `${PGN.current + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `;
     }
 
     const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
-    return `${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `;
+    return `${PGN.current + turnCounter.current}. ${piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `;
   };
 
   const updatePgnCastle = (selectedPiece: Piece, clickedOn: string, previousField: Field): string => {
     if (selectedPiece.id.charAt(1) === "w") {
       if (clickedOn === "G1" && previousField!.column === "E" && previousField!.row === 1) {
-        return `${PGN + turnCounter}. O-O `;
+        return `${PGN.current + turnCounter.current}. O-O `;
       } else if (clickedOn === "C1" && previousField!.column === "E" && previousField!.row === 1) {
-        return `${PGN + turnCounter}. O-O-O `;
+        return `${PGN.current + turnCounter.current}. O-O-O `;
       }
     } else if (selectedPiece.id.charAt(1) === "b") {
-      setTurnCounter(turnCounter + 1);
+      turnCounter.current = turnCounter.current + 1;
       if (clickedOn === "G8" && previousField!.column === "E" && previousField!.row === 8) {
-        return `${PGN} O-O `;
+        return `${PGN.current} O-O `;
       } else if (clickedOn === "C8" && previousField!.column === "E" && previousField!.row === 8) {
-        return `${PGN} O-O-O `;
+        return `${PGN.current} O-O-O `;
       }
     }
     return "";
@@ -587,25 +592,25 @@ const GamePage = () => {
   const updatePgnMove = (selectedPiece: Piece, clickedOn: string, previousField: Field, selectedField: Field): string => {
     const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
 
-    if (!whiteTurn) {
-      setTurnCounter(turnCounter + 1);
-      return `${PGN + selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `;
+    if (!whiteTurnRef.current) {
+      turnCounter.current = turnCounter.current + 1;
+      return `${PGN.current + selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `;
     }
 
-    return `${PGN + turnCounter}. ${selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `;
+    return `${PGN.current + turnCounter.current}. ${selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `;
   };
 
   const updatePgnCapture = (selectedPiece: Piece, previousField: Field, selectedField: Field): string => {
     const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
 
-    if (!whiteTurn) {
+    if (!whiteTurnRef.current) {
       const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField.column.toLowerCase();
-      setTurnCounter(turnCounter + 1);
-      return `${PGN + piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `;
+      turnCounter.current = turnCounter.current + 1;
+      return `${PGN.current + piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `;
     }
 
     const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField.column.toLowerCase();
-    return `${PGN + turnCounter}. ${piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `;
+    return `${PGN.current + turnCounter.current}. ${piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `;
   };
 
   const updatePgnPromote = (pgn: string): string => {
@@ -628,7 +633,9 @@ const GamePage = () => {
 
   const updatePgnCheckmate = (pgn: string): string => {
     let updatedPGN = "";
-    playerSide === "W" && whiteTurn ? updatedPGN = `${pgn.substring(0, pgn.length-1)}# 1-0` : updatedPGN = `${pgn.substring(0, pgn.length-1)}# 0-1`;
+    playerSide === "W" && whiteTurnRef.current ?
+      updatedPGN = `${pgn.substring(0, pgn.length-1)}# 1-0` :
+      updatedPGN = `${pgn.substring(0, pgn.length-1)}# 0-1`;
     
     return updatedPGN;
   };
@@ -652,7 +659,7 @@ const GamePage = () => {
   };
 
   const handleCastling = (clickedOn: string, previousField: Field) => {
-    if (selectedPiece!.id.charAt(1) === "w") {
+    if (selectedPieceRef.current!.id.charAt(1) === "w") {
       if (clickedOn === "G1" && fieldToString(previousField) === "E1") {
         const rookField = fields.find(field => fieldToString(field) === "H1");
         const jumpField = fields.find(field => fieldToString(field) === "F1");
@@ -664,7 +671,7 @@ const GamePage = () => {
         jumpField!.piece = rookField!.piece;
         rookField!.piece = undefined;
       }
-    } else if (selectedPiece!.id.charAt(1) === "b") {
+    } else if (selectedPieceRef.current!.id.charAt(1) === "b") {
       if (clickedOn === "G8" && fieldToString(previousField) === "E8") {
         const rookField = fields.find(field => fieldToString(field) === "H8");
         const jumpField = fields.find(field => fieldToString(field) === "F8");
@@ -809,7 +816,7 @@ const GamePage = () => {
     });
     setFields(temp);
     setSelectedPiece(null);
-    setPGN(pgnUpdate);
+    PGN.current = pgnUpdate;
     
     if (!promotion) setWhiteTurn(!whiteTurn);
 
@@ -883,6 +890,8 @@ const GamePage = () => {
         setSelectedFieldColor("");
         selectedField.piece = selectedPieceRef.current;
 
+        if (selectedPieceRef.current.PGN === "K") disableCastling(selectedPieceRef.current.FEN);
+
         let pgnUpdate = "";
         pgnUpdate += updatePgnCapture(selectedPieceRef.current, previousField, selectedField);
         playCaptureSound();
@@ -948,7 +957,7 @@ const GamePage = () => {
         setHalfMove(0);
         setFields(temp);
         setSelectedPiece(null);
-        setPGN(pgnUpdate);
+        PGN.current = pgnUpdate;
         
         if (!promotion) setWhiteTurn(!whiteTurn);
 
@@ -977,7 +986,7 @@ const GamePage = () => {
           
           if (playerSide === "W") setWhiteTurn(true);
           else setWhiteTurn(false);
-        }, 400);
+        }, 300);
       })
       .catch(error => {
         console.error("Error getting CPU move:", error);
@@ -985,7 +994,9 @@ const GamePage = () => {
   };
 
   const surrenderCpu = () => {
-    playerSide === "W" ? setPGN(`${PGN}1-0`) : setPGN(`${PGN}0-1`);
+    if (playerSide === "W") PGN.current = `${PGN.current}1-0`
+    else PGN.current = `${PGN.current}0-1`;
+
     setInputDisabled(true);
     setDisableFenImportBtn(true);
 
@@ -994,10 +1005,12 @@ const GamePage = () => {
     setModalCloseable(true);
     playGameEndSound()
     openModal();
-  }
+  };
 
   const surrender = () => {
-    playerSide === "W" ? setPGN(`${PGN}0-1`) : setPGN(`${PGN}1-0`);
+    if (playerSide === "W") PGN.current = `${PGN.current}0-1`
+    else PGN.current = `${PGN.current}1-0`;
+
     setInputDisabled(true);
     setDisableFenImportBtn(true);
 
@@ -1024,7 +1037,7 @@ const GamePage = () => {
 
   const displayPGN = () => {
     setModalHeading("Copy PGN");
-    setModalContent(PGN);
+    setModalContent(PGN.current);
     setModalCloseable(true);
     openModal();
   };
