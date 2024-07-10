@@ -10,9 +10,9 @@
     </parent>
     <groupId>com.chesser</groupId>
     <artifactId>server</artifactId>
-    <version>0.1.0</version>
-    <name>server</name>
-    <description>server</description>
+    <version>1.0.0</version>
+    <name>Chesser Server</name>
+    <description>Server for fetching game state and CPU moves, for Chesser client</description>
     <url/>
     <licenses>
         <license/>

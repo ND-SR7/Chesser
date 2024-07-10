@@ -1,5 +1,8 @@
 # Chesser ♟️
-Web platform for playing chess
+Web platform for playing chess.
+It contains 2 game modes:
+1. Game Against CPU - play against custom-made chess engine
+2. Solo/Two Player Game - play solo and experiment with Chesser or play against friends on the same client
 
 ---
 # Requirements
