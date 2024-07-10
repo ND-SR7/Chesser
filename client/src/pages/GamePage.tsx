@@ -637,32 +637,48 @@ const GamePage = () => {
     return `${pgn.substring(0, pgn.length-1)} 1/2-1/2`;
   };
 
+  const disableCastling = (pieceFEN: string) => {
+    if (pieceFEN === "K") {
+      castling[0] = false;
+      castling[1] = false;
+      castling[2] = false;
+      setCastling(castling);
+    } else if (pieceFEN === "k") {
+      castling[3] = false;
+      castling[4] = false;
+      castling[5] = false;
+      setCastling(castling);
+    }
+  };
+
   const handleCastling = (clickedOn: string, previousField: Field) => {
     if (selectedPiece!.id.charAt(1) === "w") {
-      if (clickedOn === "G1" && previousField.column === "E" && previousField.row === 1) {
+      if (clickedOn === "G1" && fieldToString(previousField) === "E1") {
         const rookField = fields.find(field => fieldToString(field) === "H1");
         const jumpField = fields.find(field => fieldToString(field) === "F1");
         jumpField!.piece = rookField!.piece;
         rookField!.piece = undefined;
-      } else if (clickedOn === "C1" && previousField.column === "E" && previousField.row === 1) {
+      } else if (clickedOn === "C1" && fieldToString(previousField) === "E1") {
         const rookField = fields.find(field => fieldToString(field) === "A1");
         const jumpField = fields.find(field => fieldToString(field) === "D1");
         jumpField!.piece = rookField!.piece;
         rookField!.piece = undefined;
       }
     } else if (selectedPiece!.id.charAt(1) === "b") {
-      if (clickedOn === "G8" && previousField.column === "E" && previousField.row === 8) {
+      if (clickedOn === "G8" && fieldToString(previousField) === "E8") {
         const rookField = fields.find(field => fieldToString(field) === "H8");
         const jumpField = fields.find(field => fieldToString(field) === "F8");
         jumpField!.piece = rookField!.piece;
         rookField!.piece = undefined;
-      } else if (clickedOn === "C8" && previousField.column === "E" && previousField.row === 8) {
+      } else if (clickedOn === "C8" && fieldToString(previousField) === "E8") {
         const rookField = fields.find(field => fieldToString(field) === "A8");
         const jumpField = fields.find(field => fieldToString(field) === "D8");
         jumpField!.piece = rookField!.piece;
         rookField!.piece = undefined;
       }
     }
+
+    disableCastling(selectedPiece!.FEN);
   };
 
   const handleFieldClick = (temp: Field[], clickedOn: string) => {
@@ -676,26 +692,14 @@ const GamePage = () => {
       return temp.find(field => field.piece === selectedPieceRef.current && !fieldMatchesClick(field));
     };
 
-    const isCastlingMove = (field: Field): boolean => {
-      const disableCastling = (pieceFEN: string) => {
-        if (pieceFEN === "K") {
-          castling[0] = false;
-          setCastling(castling);
-        } else if (pieceFEN === "k") {
-          castling[3] = false;
-          setCastling(castling);
-        }
-      };
-
+    const isCastlingMove = (field: Field, previousField: Field): boolean => {
       let isCastling = false;
       
       if (selectedPieceRef.current!.FEN === "K" && castling[0]) {
-        isCastling = fieldToString(field) === "G1" || fieldToString(field) === "C1";
+        isCastling = (fieldToString(field) === "G1" || fieldToString(field) === "C1") && fieldToString(previousField) === "E1";
       } else if (selectedPieceRef.current!.FEN === "k" && castling[3]) {
-        isCastling = fieldToString(field) === "G8" || fieldToString(field) === "C8";
+        isCastling = (fieldToString(field) === "G8" || fieldToString(field) === "C8") && fieldToString(previousField) === "E8";
       }
-
-      if (isCastling) disableCastling(selectedPieceRef.current!.FEN);
 
       return isCastling;
     }
@@ -728,13 +732,15 @@ const GamePage = () => {
     if (typeof validMove === "object" && validMove.enPassantIndex !== -1) {
       pgnUpdate += updatePgnEnPassant(temp, validMove, selectedPieceRef.current, previousField, selectedField);
       playCaptureSound();
-    } else if (isCastlingMove(selectedField)) {
+    } else if (isCastlingMove(selectedField, previousField)) {
       handleCastling(clickedOn, previousField);
       pgnUpdate += updatePgnCastle(selectedPieceRef.current, clickedOn, previousField);
       playCastleSound();
     } else {
       pgnUpdate += updatePgnMove(selectedPieceRef.current, clickedOn, previousField, selectedField);
       playMoveSound();
+
+      if (selectedPieceRef.current.PGN === "K") disableCastling(selectedPieceRef.current.FEN);
     }
 
     let fen = exportFEN(temp);
