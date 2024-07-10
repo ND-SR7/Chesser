@@ -391,6 +391,8 @@ const GamePage = () => {
     setPlayerSide(playerSide);
     setPieces();
     closeModal();
+    
+    if (playerSide === "B") playCpuMove(4, exportFEN());
   };
 
   const setPieces = () => {
@@ -410,16 +412,16 @@ const GamePage = () => {
   // when two or more pieces of the same type can reach the same field
   // additional data is written to PGN to differentiate between them
   const getPieceDisambiguation = (previousField: Field, selectedField: Field): string => {
-    const piecePGN = selectedPiece!.PGN;
+    const piecePGN = selectedPieceRef.current!.PGN;
 
     const sameTypePieceFields = fields.filter(field => field.piece?.PGN === piecePGN &&
-      field.piece !== selectedPiece &&
-      field.piece.id.charAt(1) === selectedPiece!.id.charAt(1)
+      field.piece !== selectedPieceRef.current &&
+      field.piece.id.charAt(1) === selectedPieceRef.current!.id.charAt(1)
     );
 
     const sameMovePieceFields = sameTypePieceFields.filter(field => {
       const validMove = isValidMove(
-        fields, field, selectedField, selectedPiece!, playerSide, lastMove!, castling, setCastling
+        fields, field, selectedField, selectedPieceRef.current!, playerSide, lastMove!, castling, setCastling
       );
 
       if (typeof validMove === "object") return validMove.valid;
@@ -520,11 +522,11 @@ const GamePage = () => {
 
     syncPgnAfterPromote();
     
-    if (typeof clickedOn === "string" && selectedPiece !== null) {
+    if (typeof clickedOn === "string" && selectedPieceRef.current !== null) {
       handleFieldClick(temp, clickedOn);
-    } else if (typeof clickedOn !== "string" && selectedPiece === null) {
+    } else if (typeof clickedOn !== "string" && selectedPieceRef.current === null) {
       handlePieceSelection(temp, clickedOn);
-    } else if (typeof clickedOn !== "string" && selectedPiece !== null) {
+    } else if (typeof clickedOn !== "string" && selectedPieceRef.current !== null) {
       handlePieceClick(temp, clickedOn);
     }
   };
@@ -957,18 +959,36 @@ const GamePage = () => {
   const playCpuMove = async (depth: number, fen: string) => {
     getCpuMove(fen, depth)
       .then(cpuMove => {
-        const temp = [...fields];
-        const fromField = temp.find(field => fieldToString(field) === cpuMove.from);
-        const toField = temp.find(field => fieldToString(field) === cpuMove.to);
-        
-        setSelectedPiece(fromField!.piece!);
-        boardClick(toField!.piece === undefined ? fieldToString(toField!) : toField!.piece);
-        setWhiteTurn(whiteTurn);
+        setTimeout(() => { // for smoother cpu moves
+          const temp = [...fields];
+          const fromField = temp.find(field => fieldToString(field) === cpuMove.from);
+          const toField = temp.find(field => fieldToString(field) === cpuMove.to);
+  
+          if (cpuMove.from === undefined || cpuMove.to === undefined) surrenderCpu();
+          
+          setSelectedPiece(fromField!.piece!);
+          boardClick(toField!.piece === undefined ? fieldToString(toField!) : toField!.piece);
+          
+          if (playerSide === "W") setWhiteTurn(true);
+          else setWhiteTurn(false);
+        }, 400);
       })
       .catch(error => {
         console.error("Error getting CPU move:", error);
       });
   };
+
+  const surrenderCpu = () => {
+    playerSide === "W" ? setPGN(`${PGN}1-0`) : setPGN(`${PGN}0-1`);
+    setInputDisabled(true);
+    setDisableFenImportBtn(true);
+
+    setModalHeading("Game Over");
+    setModalContent(endGameModalContent("WIN"));
+    setModalCloseable(true);
+    playGameEndSound()
+    openModal();
+  }
 
   const surrender = () => {
     playerSide === "W" ? setPGN(`${PGN}0-1`) : setPGN(`${PGN}1-0`);

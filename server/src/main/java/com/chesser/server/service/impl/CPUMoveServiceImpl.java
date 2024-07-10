@@ -3,10 +3,7 @@ package com.chesser.server.service.impl;
 import com.chesser.server.model.dto.GetCPUMoveDTO;
 import com.chesser.server.model.entity.CPUMove;
 import com.chesser.server.service.CPUMoveService;
-import com.github.bhlangonijr.chesslib.Board;
-import com.github.bhlangonijr.chesslib.Piece;
-import com.github.bhlangonijr.chesslib.Side;
-import com.github.bhlangonijr.chesslib.Square;
+import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
 import org.springframework.stereotype.Service;
 
@@ -48,6 +45,32 @@ public class CPUMoveServiceImpl implements CPUMoveService {
             if (boardValue > bestValue) {
                 bestValue = boardValue;
                 bestMove = move;
+            }
+        }
+
+        // setting best move as castling instead of moving one space towards rook when possible
+        // has to be manual due to lack of depth (standard depth is 4)
+        if (bestMove != null) {
+            if (cpuSide == Side.WHITE) {
+                if (bestMove.getFrom() == Square.E1 && bestMove.getTo() == Square.F1) {
+                    if (board.legalMoves().contains(new Move(Square.E1, Square.G1))) {
+                        bestMove = new Move(Square.E1, Square.G1);
+                    }
+                } else if (bestMove.getFrom() == Square.E1 && bestMove.getTo() == Square.D1) {
+                    if (board.legalMoves().contains(new Move(Square.E1, Square.C1))) {
+                        bestMove = new Move(Square.E1, Square.C1);
+                    }
+                }
+            } else if (cpuSide == Side.BLACK) {
+                if (bestMove.getFrom() == Square.E8 && bestMove.getTo() == Square.F8) {
+                    if (board.legalMoves().contains(new Move(Square.E8, Square.G8))) {
+                        bestMove = new Move(Square.E8, Square.G8);
+                    }
+                } else if (bestMove.getFrom() == Square.E8 && bestMove.getTo() == Square.D8) {
+                    if (board.legalMoves().contains(new Move(Square.E8, Square.C8))) {
+                        bestMove = new Move(Square.E8, Square.C8);
+                    }
+                }
             }
         }
 
