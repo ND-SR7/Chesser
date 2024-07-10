@@ -4,7 +4,7 @@ export const DisabledStyle = {
   backgroundColor: "lightgray",
   border: "none",
   cursor: "not-allowed"
-}
+};
 
 const ButtonStyled = styled.button`
   margin: ${(props) => props.theme.margins.standard};

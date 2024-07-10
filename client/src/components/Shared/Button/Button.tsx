@@ -8,7 +8,7 @@ interface ButtonProps {
   buttonType: ButtonType;
   disabled?: boolean;
   onClick?: () => void;
-}
+};
 
 const Button = ({id, label, buttonType, disabled, onClick} : ButtonProps) => {
   return (

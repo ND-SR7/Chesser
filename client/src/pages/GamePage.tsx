@@ -37,8 +37,13 @@ import { fieldToString } from "../services/client/StringService";
 import { getCpuMove } from "../services/server/CPUMoveService";
 
 type OutcomeString = "WIN" | "LOSS" | "DRAW" | "SURRENDER";
+type GameTypeString = "SOLO" | "CPU"; // SOLO also used for two players on same client
 
-const GamePage = () => {
+interface GamePageProps {
+  gameType: GameTypeString;
+};
+
+const GamePage = ({gameType} : GamePageProps) => {
   const [fields, setFields] = useState<Field[]>([
     {row: 8, column: "A"}, {row: 8, column: "B"}, {row: 8, column: "C"}, {row: 8, column: "D"},
     {row: 8, column: "E"}, {row: 8, column: "F"}, {row: 8, column: "G"}, {row: 8, column: "H"},
@@ -972,6 +977,8 @@ const GamePage = () => {
   };
 
   const playCpuMove = async (depth: number, fen: string) => {
+    if (gameType === "SOLO") return;
+
     getCpuMove(fen, depth)
       .then(cpuMove => {
         setTimeout(() => { // for smoother cpu moves
