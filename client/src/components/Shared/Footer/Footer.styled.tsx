@@ -4,10 +4,8 @@ const FooterStyled = styled.footer`
   background-color: ${(props) => props.theme.colors.base};
   font-weight: ${(props) => props.theme.fontWeights.semiBold};
   font-style: italic;
-  position:absolute;
-  left:0;
-  bottom:0;
-  right:0;
+  margin-top: auto;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
 `;
 
 export default FooterStyled;

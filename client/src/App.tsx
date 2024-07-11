@@ -6,6 +6,7 @@ import Theme from './Theme';
 
 import Header from './components/Shared/Header/Header';
 import Footer from './components/Shared/Footer/Footer';
+import ContentStyled from './components/Shared/Content/Content.styled';
 
 import StartPage from './pages/StartPage';
 import GamePage from './pages/GamePage';
@@ -17,12 +18,14 @@ function App() {
       <div className="App">
         <BrowserRouter>
           <Header />
-          <Routes>
-            <Route index element={<StartPage />} />
-            <Route path="/game/solo" element={<GamePage gameType="SOLO" />} />
-            <Route path="/game/cpu" element={<GamePage gameType="CPU" />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+          <ContentStyled>
+            <Routes>
+              <Route index element={<StartPage />} />
+              <Route path="/game/solo" element={<GamePage gameType="SOLO" />} />
+              <Route path="/game/cpu" element={<GamePage gameType="CPU" />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </ContentStyled>
           <Footer />
         </BrowserRouter>
       </div>

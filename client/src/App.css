@@ -4,6 +4,9 @@
 
 .App {
   text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 
   -webkit-user-select: none; /* Safari */
   -moz-user-select: none;    /* Firefox */
@@ -12,7 +15,7 @@
 }
 
 /* allow selection for export modals */
-.App > div > div > section {
+.App > div > div > div > section {
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: unset;
