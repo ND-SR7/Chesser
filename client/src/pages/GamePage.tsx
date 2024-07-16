@@ -114,7 +114,7 @@ const GamePage = ({gameType} : GamePageProps) => {
 
   const PGN = useRef("");
   const turnCounter = useRef(1);
-  const [halfMove, setHalfMove] = useState<number>(0);
+  const halfMove = useRef(0);
   const [lastMove, setLastMove] = useState<LastMove>();
   // checking if castling is legal
   // false if moved, in order, from white: king, kingside rook, queenside rook
@@ -273,7 +273,7 @@ const GamePage = ({gameType} : GamePageProps) => {
 
     fen += castlingFEN();
     fen += enPassantFen();
-    fen += ` ${halfMove} ${turnCounter.current}`;
+    fen += ` ${halfMove.current} ${turnCounter.current}`;
 
     return fen;
   };
@@ -380,7 +380,7 @@ const GamePage = ({gameType} : GamePageProps) => {
         }
         
         // setting half-move and turn counter
-        setHalfMove(parseInt(fen.split(" ")[4]));
+        halfMove.current = parseInt(fen.split(" ")[4]);
         turnCounter.current = parseInt(fen.split(" ")[5]);
         
         setFields(temp);
@@ -809,9 +809,9 @@ const GamePage = ({gameType} : GamePageProps) => {
     }
 
     if (selectedPieceRef.current.PGN === "") {
-      setHalfMove(0);
+      halfMove.current = 0;
     } else {
-      setHalfMove(halfMove + 1);
+      halfMove.current = halfMove.current + 1;
     }
     
     setLastMove({
@@ -959,7 +959,7 @@ const GamePage = ({gameType} : GamePageProps) => {
           to: fields.indexOf(selectedField!),
           piece: selectedPieceRef.current.PGN
         });
-        setHalfMove(0);
+        halfMove.current = 0;
         setFields(temp);
         setSelectedPiece(null);
         PGN.current = pgnUpdate;
