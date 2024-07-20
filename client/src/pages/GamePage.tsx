@@ -108,6 +108,7 @@ const GamePage = ({gameType} : GamePageProps) => {
   const [playerSide, setPlayerSide] = useState<SideString>("B");
   const [whiteTurn, setWhiteTurn, whiteTurnRef] = useStateRef(true);
   const cpuMoved = useRef(false);
+  const cpuEnabled = useRef(false);
 
   const [selectedPiece, setSelectedPiece, selectedPieceRef] = useStateRef<Piece | null>(null);
   const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
@@ -191,12 +192,13 @@ const GamePage = ({gameType} : GamePageProps) => {
     if (boardEmpty) {
       setModalCloseable(false);
       openModal();
+      if (gameType === "CPU") cpuEnabled.current = true;
     } else {
       syncPgnAfterPromote();
     }
-  }, [fields, syncPgnAfterPromote]);
+  }, [fields, syncPgnAfterPromote, gameType]);
 
-  const exportFEN = (tempFields?: Field[] | undefined, imported?: boolean): string => {
+  const exportFEN = (tempFields?: Field[] | undefined, turnAdjustment?: boolean): string => {
     let fenFields = fields;
     if (tempFields !== undefined) fenFields = tempFields;
     
@@ -268,7 +270,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     fen = fen.substring(0, fen.length - 1);
 
     // need to update turn part if checking game state
-    if (tempFields !== undefined && !imported) whiteTurnRef.current ? fen += " b" : fen += " w";
+    if (turnAdjustment) whiteTurnRef.current ? fen += " b" : fen += " w";
     else whiteTurnRef.current ? fen += " w" : fen += " b";
 
     fen += castlingFEN();
@@ -386,9 +388,10 @@ const GamePage = ({gameType} : GamePageProps) => {
         setFields(temp);
         closeModal();
         setDisableFenImportBtn(true);
+        PGN.current = "";
 
         if (whiteTurnFEN !== (playerSide === "W")) {
-          playCpuMove(4, exportFEN(temp, true));
+          playCpuMove(4, exportFEN(temp, false));
           cpuMoved.current = true;
         }
       } catch (error) {
@@ -459,9 +462,9 @@ const GamePage = ({gameType} : GamePageProps) => {
     return disambiguation;
   };
 
-  const promotePiece = (promoteTo: string) => {
-    const temp = [...fields];
-    if (whiteTurn) {
+  const promotePiece = (promoteTo: string, tempFields?: Field[]) => {
+    const temp = tempFields !== undefined ? [...tempFields] : [...fields];
+    if (whiteTurn || (!whiteTurn && cpuEnabled.current)) {
       const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 8);
       switch (promoteTo) {
         case "Q":
@@ -497,12 +500,11 @@ const GamePage = ({gameType} : GamePageProps) => {
 
     playPromoteSound();
     setFields(temp);
-    setWhiteTurn(!whiteTurn)
     closeModal();
 
     // checking game state after promotion
     // previously checked game state was with pawn on first/last row
-    const gameState = getGameState(exportFEN(temp));
+    const gameState = getGameState(exportFEN(temp, false));
     if (gameState.mated) {
       setInputDisabled(true);
       setDisableFenImportBtn(true);
@@ -755,12 +757,12 @@ const GamePage = ({gameType} : GamePageProps) => {
       if (selectedPieceRef.current.PGN === "K") disableCastling(selectedPieceRef.current.FEN);
     }
 
-    let fen = exportFEN(temp);
+    let fen = exportFEN(temp, true);
     
     const promotion = (selectedPieceRef.current.FEN === "P" && selectedField?.row === 8) ||
       (selectedPieceRef.current.FEN === "p" && selectedField?.row === 1);
 
-    if (promotion) {
+    if (promotion && !cpuEnabled.current) {
       setModalHeading("Pawn Promotion");
       setModalContent(promotionModalContent);
       setModalCloseable(false);
@@ -779,9 +781,12 @@ const GamePage = ({gameType} : GamePageProps) => {
       fenParts[0] = fenBoardLines.join("/");
       
       fen = fenParts.join(" ");
+    } else if (promotion && cpuMoved) {
+      pgnUpdate = updatePgnPromote(pgnUpdate);
+      promotePiece("Q", temp);
     }
 
-    const gameState = getGameState(exportFEN(temp));
+    const gameState = getGameState(exportFEN(temp, true));
     if (gameState.mated) {
       pgnUpdate = updatePgnCheckmate(pgnUpdate);
       setInputDisabled(true);
@@ -823,7 +828,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     setSelectedPiece(null);
     PGN.current = pgnUpdate;
     
-    if (!promotion) setWhiteTurn(!whiteTurn);
+    setWhiteTurn(!whiteTurn);
 
     if (whiteTurnRef.current === (playerSide === "B") && !cpuMoved.current) {
       playCpuMove(4, fen);
@@ -901,7 +906,7 @@ const GamePage = ({gameType} : GamePageProps) => {
         pgnUpdate += updatePgnCapture(selectedPieceRef.current, previousField, selectedField);
         playCaptureSound();
 
-        let fen = exportFEN(temp);
+        let fen = exportFEN(temp, true);
 
         const promotion = (selectedPieceRef.current.FEN === "P" && selectedField?.row === 8) ||
           (selectedPieceRef.current.FEN === "p" && selectedField?.row === 1);
@@ -927,7 +932,7 @@ const GamePage = ({gameType} : GamePageProps) => {
           fen = fenParts.join(" ");
         }
 
-        const gameState = getGameState(exportFEN(temp));
+        const gameState = getGameState(exportFEN(temp, true));
         if (gameState.mated) {
           pgnUpdate = updatePgnCheckmate(pgnUpdate);
           setInputDisabled(true);
@@ -964,7 +969,7 @@ const GamePage = ({gameType} : GamePageProps) => {
         setSelectedPiece(null);
         PGN.current = pgnUpdate;
         
-        if (!promotion) setWhiteTurn(!whiteTurn);
+        setWhiteTurn(!whiteTurn);
 
         if (whiteTurnRef.current === (playerSide === "B") && !cpuMoved.current) {
           playCpuMove(4, fen);
