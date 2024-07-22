@@ -109,6 +109,7 @@ const GamePage = ({gameType} : GamePageProps) => {
   const [whiteTurn, setWhiteTurn, whiteTurnRef] = useStateRef(true);
   const cpuMoved = useRef(false);
   const cpuEnabled = useRef(false);
+  const cpuDepth = useRef(1);
 
   const [selectedPiece, setSelectedPiece, selectedPieceRef] = useStateRef<Piece | null>(null);
   const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
@@ -126,6 +127,14 @@ const GamePage = ({gameType} : GamePageProps) => {
 
   const whiteBtn: JSX.Element = <Button key="btnWhite" buttonType="button" label="White" onClick={() => setupBoard("W")} />
   const blackBtn: JSX.Element = <Button key="btnBlack" buttonType="button" label="Black" onClick={() => setupBoard("B")} />
+  const cpuDepthContent = (
+    <div hidden={gameType === "SOLO"}>
+      <label htmlFor="cpuDepthInput">CPU Depth: </label>
+      <input id="cpuDepthInput" key="cpuDepthInput" type="number" size={5} min={1} max={4} defaultValue={1} />
+      <br />
+      <br />
+    </div>
+  );
   const fenInput = <input id="fenInput" key="fenInput" type="text" maxLength={87} size={60} />
   const fenConfirmBtn = <Button key="importFenBtn" buttonType="button" label="Confirm" onClick={() => importFEN()} />
   const endGameModalContent = (outcome: OutcomeString) => {
@@ -165,7 +174,7 @@ const GamePage = ({gameType} : GamePageProps) => {
 
   const [showModal, setModal] = useState(false);
   const [modalHeading, setModalHeading] = useState("Select a side");
-  const [modalContent, setModalContent] = useState<any>([whiteBtn, blackBtn]);
+  const [modalContent, setModalContent] = useState<any>([cpuDepthContent, whiteBtn, blackBtn]);
   const [modalCloseable, setModalCloseable] = useState(false);
   const openModal = () => setModal(true);
   const closeModal = () => setModal(false);
@@ -192,11 +201,40 @@ const GamePage = ({gameType} : GamePageProps) => {
     if (boardEmpty) {
       setModalCloseable(false);
       openModal();
-      if (gameType === "CPU") cpuEnabled.current = true;
     } else {
       syncPgnAfterPromote();
     }
   }, [fields, syncPgnAfterPromote, gameType]);
+
+  const setupBoard = (playerSide: SideString) => {
+    setPlayerSide(playerSide);
+    setPieces();
+    
+    if (gameType === "CPU") {
+      cpuEnabled.current = true;
+      const cpuDepthInputElement = document.getElementById("cpuDepthInput") as HTMLInputElement | null;
+      const depth = cpuDepthInputElement?.value.trim() || "";
+      cpuDepth.current = Number(depth);
+    }
+    
+    if (playerSide === "B" && cpuEnabled.current) playCpuMove(cpuDepth.current, exportFEN());
+    
+    closeModal();
+  };
+
+  const setPieces = () => {
+    const temp = [...fields];
+
+    for (let i = 0; i < 64; i++) {
+      if (i >= 48)
+        temp[i].piece = pieces[i - 32];
+
+      if (i < 16)
+        temp[i].piece = pieces[i];
+    }
+
+    setFields(temp);
+  };
 
   const exportFEN = (tempFields?: Field[] | undefined, turnAdjustment?: boolean): string => {
     let fenFields = fields;
@@ -391,75 +429,13 @@ const GamePage = ({gameType} : GamePageProps) => {
         PGN.current = "";
 
         if (whiteTurnFEN !== (playerSide === "W")) {
-          playCpuMove(4, exportFEN(temp, false));
+          playCpuMove(cpuDepth.current, exportFEN(temp, false));
           cpuMoved.current = true;
         }
       } catch (error) {
         console.error(error);
       }
     }
-  };
-
-  const setupBoard = (playerSide: SideString) => {
-    setPlayerSide(playerSide);
-    setPieces();
-    closeModal();
-    
-    if (playerSide === "B") playCpuMove(4, exportFEN());
-  };
-
-  const setPieces = () => {
-    const temp = [...fields];
-
-    for (let i = 0; i < 64; i++) {
-      if (i >= 48)
-        temp[i].piece = pieces[i - 32];
-
-      if (i < 16)
-        temp[i].piece = pieces[i];
-    }
-
-    setFields(temp);
-  };
-
-  // when two or more pieces of the same type can reach the same field
-  // additional data is written to PGN to differentiate between them
-  const getPieceDisambiguation = (previousField: Field, selectedField: Field): string => {
-    const piecePGN = selectedPieceRef.current!.PGN;
-
-    const sameTypePieceFields = fields.filter(field => field.piece?.PGN === piecePGN &&
-      field.piece !== selectedPieceRef.current &&
-      field.piece.id.charAt(1) === selectedPieceRef.current!.id.charAt(1)
-    );
-
-    const sameMovePieceFields = sameTypePieceFields.filter(field => {
-      const validMove = isValidMove(
-        fields, field, selectedField, selectedPieceRef.current!, playerSide, lastMove!, castling, setCastling
-      );
-
-      if (typeof validMove === "object") return validMove.valid;
-      
-      return validMove;
-    });
-
-    let disambiguation = "";
-    
-    if (piecePGN !== "" && sameMovePieceFields.length > 0) {
-      const sameColumn = sameMovePieceFields.some(field => field.column === previousField.column);
-      const sameRow = sameMovePieceFields.some(field => field.row === previousField.row);
-
-      if (sameColumn && sameRow) {
-        disambiguation += previousField.column.toLowerCase() + previousField.row;
-      } else if (sameColumn) {
-        disambiguation += previousField.row;
-      } else if (sameRow) {
-        disambiguation += previousField.column.toLowerCase();
-      } else {
-        disambiguation += previousField.column.toLowerCase();
-      }
-    }
-
-    return disambiguation;
   };
 
   const promotePiece = (promoteTo: string, tempFields?: Field[]) => {
@@ -529,20 +505,6 @@ const GamePage = ({gameType} : GamePageProps) => {
     }
   };
 
-  const boardClick = (clickedOn: Piece | string) => {
-    const temp = [...fields];
-
-    syncPgnAfterPromote();
-    
-    if (typeof clickedOn === "string" && selectedPieceRef.current !== null) {
-      handleFieldClick(temp, clickedOn);
-    } else if (typeof clickedOn !== "string" && selectedPieceRef.current === null) {
-      handlePieceSelection(temp, clickedOn);
-    } else if (typeof clickedOn !== "string" && selectedPieceRef.current !== null) {
-      handlePieceClick(temp, clickedOn);
-    }
-  };
-
   const blinkInvalidMove = (selectedField: Field) => {
     const fieldDiv = document.getElementById(fieldToString(selectedField));
       
@@ -560,6 +522,46 @@ const GamePage = ({gameType} : GamePageProps) => {
     
         blinkRed();
       }
+  };
+
+  // when two or more pieces of the same type can reach the same field
+  // additional data is written to PGN to differentiate between them
+  const getPieceDisambiguation = (previousField: Field, selectedField: Field): string => {
+    const piecePGN = selectedPieceRef.current!.PGN;
+
+    const sameTypePieceFields = fields.filter(field => field.piece?.PGN === piecePGN &&
+      field.piece !== selectedPieceRef.current &&
+      field.piece.id.charAt(1) === selectedPieceRef.current!.id.charAt(1)
+    );
+
+    const sameMovePieceFields = sameTypePieceFields.filter(field => {
+      const validMove = isValidMove(
+        fields, field, selectedField, selectedPieceRef.current!, playerSide, lastMove!, castling, setCastling
+      );
+
+      if (typeof validMove === "object") return validMove.valid;
+      
+      return validMove;
+    });
+
+    let disambiguation = "";
+    
+    if (piecePGN !== "" && sameMovePieceFields.length > 0) {
+      const sameColumn = sameMovePieceFields.some(field => field.column === previousField.column);
+      const sameRow = sameMovePieceFields.some(field => field.row === previousField.row);
+
+      if (sameColumn && sameRow) {
+        disambiguation += previousField.column.toLowerCase() + previousField.row;
+      } else if (sameColumn) {
+        disambiguation += previousField.row;
+      } else if (sameRow) {
+        disambiguation += previousField.column.toLowerCase();
+      } else {
+        disambiguation += previousField.column.toLowerCase();
+      }
+    }
+
+    return disambiguation;
   };
 
   const updatePgnEnPassant = (temp: Field[], validMove: ValidMove, selectedPiece: Piece, previousField: Field, selectedField: Field): string => {
@@ -693,6 +695,20 @@ const GamePage = ({gameType} : GamePageProps) => {
     }
 
     disableCastling(selectedPiece!.FEN);
+  };
+
+  const boardClick = (clickedOn: Piece | string) => {
+    const temp = [...fields];
+
+    syncPgnAfterPromote();
+    
+    if (typeof clickedOn === "string" && selectedPieceRef.current !== null) {
+      handleFieldClick(temp, clickedOn);
+    } else if (typeof clickedOn !== "string" && selectedPieceRef.current === null) {
+      handlePieceSelection(temp, clickedOn);
+    } else if (typeof clickedOn !== "string" && selectedPieceRef.current !== null) {
+      handlePieceClick(temp, clickedOn);
+    }
   };
 
   const handleFieldClick = (temp: Field[], clickedOn: string) => {
@@ -831,7 +847,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     setWhiteTurn(!whiteTurn);
 
     if (whiteTurnRef.current === (playerSide === "B") && !cpuMoved.current) {
-      playCpuMove(4, fen);
+      playCpuMove(cpuDepth.current, fen);
       cpuMoved.current = true;
     } else {
       cpuMoved.current = false;
@@ -972,7 +988,7 @@ const GamePage = ({gameType} : GamePageProps) => {
         setWhiteTurn(!whiteTurn);
 
         if (whiteTurnRef.current === (playerSide === "B") && !cpuMoved.current) {
-          playCpuMove(4, fen);
+          playCpuMove(cpuDepth.current, fen);
           cpuMoved.current = true;
         } else {
           cpuMoved.current = false;

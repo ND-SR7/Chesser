@@ -49,7 +49,7 @@ public class CPUMoveServiceImpl implements CPUMoveService {
         }
 
         // setting best move as castling instead of moving one space towards rook when possible
-        // has to be manual due to lack of depth (standard depth is 4)
+        // has to be manual due to lack of depth (max depth is 4)
         if (bestMove != null) {
             if (cpuSide == Side.WHITE) {
                 if (bestMove.getFrom() == Square.E1 && bestMove.getTo() == Square.F1) {
