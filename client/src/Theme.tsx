@@ -1,11 +1,17 @@
-import { ThemeProvider } from "styled-components";
+import { createGlobalStyle, ThemeProvider } from "styled-components";
+
+interface ThemeProps {
+  darkTheme: boolean;
+  children: any;
+}
 
 const BaseTheme = {
   colors: {
     base: "lightblue",
     accent: "blue",
     background: "whitesmoke",
-    backgroundModal: "rgba(0,0,0,0.4)"
+    backgroundModal: "rgba(0,0,0,0.4)",
+    text: "black"
   },
   fontSizes: {
     small: "10px",
@@ -55,6 +61,38 @@ const BaseTheme = {
   }
 };
 
-export default function Theme({children}: any) {
-  return <ThemeProvider theme={BaseTheme}>{children}</ThemeProvider>;
+const DarkTheme = {
+  ...BaseTheme,
+  colors: {
+    base: "rgb(0,1,80)",
+    accent: "lightblue",
+    background: "rgb(0,6,30)",
+    backgroundModal: "rgba(0,0,0,0.85)",
+    text: "white"
+  }
+};
+
+const GlobalStyle = createGlobalStyle`
+  body {
+    color: ${({theme}) => theme.colors.text};
+    background-color: ${({theme}) => theme.colors.background};
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  }
+`;
+
+export default function Theme({darkTheme, children}: ThemeProps) {
+  return (
+  <ThemeProvider theme={darkTheme ? DarkTheme : BaseTheme}>
+    <GlobalStyle />
+    {children}
+  </ThemeProvider>
+  );
 };

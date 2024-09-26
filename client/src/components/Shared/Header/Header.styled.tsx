@@ -1,7 +1,7 @@
 import styled from "styled-components";
 
 const HeaderStyled = styled.header`
-  color: blue;
+  color: ${(props) => props.theme.colors.accent};
   display: flex;
   justify-content: ${(props) => props.theme.flex.justify};
   background-color: ${(props) => props.theme.colors.base};

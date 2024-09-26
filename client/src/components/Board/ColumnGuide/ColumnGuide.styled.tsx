@@ -1,7 +1,7 @@
 import styled from "styled-components";
 
 const ColumnGuideStyled = styled.div`
-  background-color: whitesmoke !important;
+  background-color: ${(props) => props.theme.colors.background} !important;
   width: 28vw;
   display: flex;
   justify-content: space-around;
