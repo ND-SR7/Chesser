@@ -1,13 +1,17 @@
 package com.chesser.server.service.impl;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.chesser.server.model.dto.GetCPUMoveDTO;
 import com.chesser.server.model.entity.CPUMove;
 import com.chesser.server.service.CPUMoveService;
-import com.github.bhlangonijr.chesslib.*;
+import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.Side;
+import com.github.bhlangonijr.chesslib.Square;
+import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.move.Move;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class CPUMoveServiceImpl implements CPUMoveService {

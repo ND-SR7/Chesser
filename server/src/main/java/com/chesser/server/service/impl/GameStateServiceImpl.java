@@ -1,10 +1,11 @@
 package com.chesser.server.service.impl;
 
+import org.springframework.stereotype.Service;
+
 import com.chesser.server.model.dto.GetGameStateDTO;
 import com.chesser.server.model.entity.GameState;
 import com.chesser.server.service.GameStateService;
 import com.github.bhlangonijr.chesslib.Board;
-import org.springframework.stereotype.Service;
 
 @Service
 public class GameStateServiceImpl implements GameStateService {

@@ -1,6 +1,10 @@
 package com.chesser.server.model.entity;
 
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 
 @Getter
 @Setter
