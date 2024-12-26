@@ -25,5 +25,3 @@ It contains 2 game modes:
 
 # Known issues
 - Clicking on invalid move at certain interval can color the field red
-- Game End message always 'win' type when white, always 'lose' type when black
-- Queen side castle possible when there is a piece between king and rook

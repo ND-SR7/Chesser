@@ -189,9 +189,14 @@ export const isValidMove = (
 
     const isCastlePossible = (start: number, end: number): boolean => {
       const step = start < end ? 1 : -1;
+      const kingRow = fields[start].row;
+      let i = start + step
 
-      for (let i = start + step; i !== end; i += step) {
-        if (fields[i].piece !== undefined) return false;
+      while (fields[i] !== undefined && fields[i].row === kingRow) {
+        if (fields[i].piece !== undefined && fields[i].piece!.PGN === "R") break;
+        else if (fields[i].piece !== undefined) return false;
+
+        i += step;
       }
 
       // checking if enemy piece is blocking castling

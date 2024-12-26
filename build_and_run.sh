@@ -42,6 +42,7 @@ else
   exit 1
 fi
 
+log_message "Chesser is ready for use."
 log_message "To stop both applications, press Ctrl+C."
 
 wait $CLIENT_PID

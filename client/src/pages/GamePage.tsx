@@ -1,5 +1,4 @@
 import { JSX, useCallback, useEffect, useRef, useState } from "react";
-import useStateRef from "react-usestateref";
 
 import Board, { SideString } from "../components/Board/Board";
 import Button from "../components/Shared/Button/Button";
@@ -106,12 +105,12 @@ const GamePage = ({gameType} : GamePageProps) => {
   const [playGameEndSound] = useSound(gameEndSound);
 
   const [playerSide, setPlayerSide] = useState<SideString>("B");
-  const [whiteTurn, setWhiteTurn, whiteTurnRef] = useStateRef(true);
+  const whiteTurn = useRef(true);
   const cpuMoved = useRef(false);
   const cpuEnabled = useRef(false);
   const cpuDepth = useRef(1);
 
-  const [selectedPiece, setSelectedPiece, selectedPieceRef] = useStateRef<Piece | null>(null);
+  const selectedPiece = useRef<Piece | null>(null);
   const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
 
   const PGN = useRef("");
@@ -122,19 +121,31 @@ const GamePage = ({gameType} : GamePageProps) => {
   // false if moved, in order, from white: king, kingside rook, queenside rook
   const [castling, setCastling] = useState<boolean[]>([true, true, true, true, true, true]);
 
-  const [inputDisabled, setInputDisabled] = useState(false);
+  const inputDisabled = useRef(false);
   const [disableFenImportBtn, setDisableFenImportBtn] = useState(false);
 
   const whiteBtn: JSX.Element = <Button key="btnWhite" buttonType="button" label="White" onClick={() => setupBoard("W")} />
   const blackBtn: JSX.Element = <Button key="btnBlack" buttonType="button" label="Black" onClick={() => setupBoard("B")} />
+  
+  const cpuDepthCheck = (e: any) => {
+    const newValue = e.target.value;
+    if (newValue >= 1 && newValue <= 4) {
+      cpuDepth.current = newValue; 
+    } else { 
+      alert("Please enter a value between 1 and 4.");
+      const cpuDepthInputElement = document.getElementById("cpuDepthInput") as HTMLInputElement | null;
+      cpuDepthInputElement!.value = "1";
+    }
+  };
   const cpuDepthContent = (
     <div hidden={gameType === "SOLO"}>
       <label htmlFor="cpuDepthInput">CPU Depth: </label>
-      <input id="cpuDepthInput" key="cpuDepthInput" type="number" size={5} min={1} max={4} defaultValue={1} />
+      <input id="cpuDepthInput" key="cpuDepthInput" type="number" size={5} min={1} max={4} defaultValue={1} onInput={(e) => cpuDepthCheck(e)}/>
       <br />
       <br />
     </div>
   );
+
   const fenInput = <input id="fenInput" key="fenInput" type="text" maxLength={87} size={60} />
   const fenConfirmBtn = <Button key="importFenBtn" buttonType="button" label="Confirm" onClick={() => importFEN()} />
   const endGameModalContent = (outcome: OutcomeString) => {
@@ -260,8 +271,8 @@ const GamePage = ({gameType} : GamePageProps) => {
     const enPassantFen = (): string => {
       const enPassantPossible = (): boolean => {
         return lastMove?.piece === "" && (
-          (whiteTurn && (lastMove.to - lastMove.from) === 16 && Math.floor(lastMove.to / 8) === 3) ||
-          (!whiteTurn && (lastMove.from - lastMove.to) === 16 && Math.floor(lastMove.to / 8) === 4)
+          (whiteTurn.current && (lastMove.to - lastMove.from) === 16 && Math.floor(lastMove.to / 8) === 3) ||
+          (!whiteTurn.current && (lastMove.from - lastMove.to) === 16 && Math.floor(lastMove.to / 8) === 4)
         );
       };
 
@@ -308,8 +319,8 @@ const GamePage = ({gameType} : GamePageProps) => {
     fen = fen.substring(0, fen.length - 1);
 
     // need to update turn part if checking game state
-    if (turnAdjustment) whiteTurnRef.current ? fen += " b" : fen += " w";
-    else whiteTurnRef.current ? fen += " w" : fen += " b";
+    if (turnAdjustment) whiteTurn.current ? fen += " b" : fen += " w";
+    else whiteTurn.current ? fen += " w" : fen += " b";
 
     fen += castlingFEN();
     fen += enPassantFen();
@@ -392,7 +403,7 @@ const GamePage = ({gameType} : GamePageProps) => {
 
         // setting the turn
         const whiteTurnFEN = fen.split(" ")[1] === "w" ? true : false;
-        setWhiteTurn(whiteTurnFEN);
+        whiteTurn.current = whiteTurnFEN;
 
         const castlingFEN = fen.split(" ")[2];
 
@@ -440,7 +451,7 @@ const GamePage = ({gameType} : GamePageProps) => {
 
   const promotePiece = (promoteTo: string, tempFields?: Field[]) => {
     const temp = tempFields !== undefined ? [...tempFields] : [...fields];
-    if (whiteTurn || (!whiteTurn && cpuEnabled.current)) {
+    if (whiteTurn.current || (!whiteTurn.current && cpuEnabled.current)) {
       const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 8);
       switch (promoteTo) {
         case "Q":
@@ -482,11 +493,11 @@ const GamePage = ({gameType} : GamePageProps) => {
     // previously checked game state was with pawn on first/last row
     const gameState = getGameState(exportFEN(temp, false));
     if (gameState.mated) {
-      setInputDisabled(true);
+      inputDisabled.current = true;
       setDisableFenImportBtn(true);
       setModalHeading("Game Over");
       
-      if (playerSide === "W" && whiteTurn) setModalContent(endGameModalContent("WIN"));
+      if ((playerSide === "W" && whiteTurn.current) || (playerSide === "B" && !whiteTurn.current)) setModalContent(endGameModalContent("WIN"));
       else setModalContent(endGameModalContent("LOSS"));
 
       setModalCloseable(true);
@@ -495,7 +506,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     } else if (gameState.kingAttacked) {
       playCheckSound();
     } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
-      setInputDisabled(true);
+      inputDisabled.current = true;
       setDisableFenImportBtn(true);
       setModalHeading("Game Over");
       setModalContent(endGameModalContent("DRAW"));
@@ -527,16 +538,16 @@ const GamePage = ({gameType} : GamePageProps) => {
   // when two or more pieces of the same type can reach the same field
   // additional data is written to PGN to differentiate between them
   const getPieceDisambiguation = (previousField: Field, selectedField: Field): string => {
-    const piecePGN = selectedPieceRef.current!.PGN;
+    const piecePGN = selectedPiece.current!.PGN;
 
     const sameTypePieceFields = fields.filter(field => field.piece?.PGN === piecePGN &&
-      field.piece !== selectedPieceRef.current &&
-      field.piece.id.charAt(1) === selectedPieceRef.current!.id.charAt(1)
+      field.piece !== selectedPiece.current &&
+      field.piece.id.charAt(1) === selectedPiece.current!.id.charAt(1)
     );
 
     const sameMovePieceFields = sameTypePieceFields.filter(field => {
       const validMove = isValidMove(
-        fields, field, selectedField, selectedPieceRef.current!, playerSide, lastMove!, castling, setCastling
+        fields, field, selectedField, selectedPiece.current!, playerSide, lastMove!, castling, setCastling
       );
 
       if (typeof validMove === "object") return validMove.valid;
@@ -570,7 +581,7 @@ const GamePage = ({gameType} : GamePageProps) => {
 
     const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
 
-    if (!whiteTurnRef.current) {
+    if (!whiteTurn.current) {
       const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField!.column.toLowerCase();
       turnCounter.current = turnCounter.current + 1;
       return `${PGN.current + piecePGN + pieceDisambiguation}x${selectedField!.column.toLowerCase() + selectedField!.row} `;
@@ -601,7 +612,7 @@ const GamePage = ({gameType} : GamePageProps) => {
   const updatePgnMove = (selectedPiece: Piece, clickedOn: string, previousField: Field, selectedField: Field): string => {
     const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
 
-    if (!whiteTurnRef.current) {
+    if (!whiteTurn.current) {
       turnCounter.current = turnCounter.current + 1;
       return `${PGN.current + selectedPiece.PGN + pieceDisambiguation + clickedOn.toLowerCase()} `;
     }
@@ -612,7 +623,7 @@ const GamePage = ({gameType} : GamePageProps) => {
   const updatePgnCapture = (selectedPiece: Piece, previousField: Field, selectedField: Field): string => {
     const pieceDisambiguation = getPieceDisambiguation(previousField, selectedField);
 
-    if (!whiteTurnRef.current) {
+    if (!whiteTurn.current) {
       const piecePGN = selectedPiece.PGN !== "" ? selectedPiece.PGN : previousField.column.toLowerCase();
       turnCounter.current = turnCounter.current + 1;
       return `${PGN.current + piecePGN + pieceDisambiguation}x${selectedField.column.toLowerCase() + selectedField.row} `;
@@ -642,7 +653,7 @@ const GamePage = ({gameType} : GamePageProps) => {
 
   const updatePgnCheckmate = (pgn: string): string => {
     let updatedPGN = "";
-    playerSide === "W" && whiteTurnRef.current ?
+    playerSide === "W" && whiteTurn.current ?
       updatedPGN = `${pgn.substring(0, pgn.length-1)}# 1-0` :
       updatedPGN = `${pgn.substring(0, pgn.length-1)}# 0-1`;
     
@@ -668,7 +679,7 @@ const GamePage = ({gameType} : GamePageProps) => {
   };
 
   const handleCastling = (clickedOn: string, previousField: Field) => {
-    if (selectedPieceRef.current!.id.charAt(1) === "w") {
+    if (selectedPiece.current!.id.charAt(1) === "w") {
       if (clickedOn === "G1" && fieldToString(previousField) === "E1") {
         const rookField = fields.find(field => fieldToString(field) === "H1");
         const jumpField = fields.find(field => fieldToString(field) === "F1");
@@ -680,7 +691,7 @@ const GamePage = ({gameType} : GamePageProps) => {
         jumpField!.piece = rookField!.piece;
         rookField!.piece = undefined;
       }
-    } else if (selectedPieceRef.current!.id.charAt(1) === "b") {
+    } else if (selectedPiece.current!.id.charAt(1) === "b") {
       if (clickedOn === "G8" && fieldToString(previousField) === "E8") {
         const rookField = fields.find(field => fieldToString(field) === "H8");
         const jumpField = fields.find(field => fieldToString(field) === "F8");
@@ -694,7 +705,7 @@ const GamePage = ({gameType} : GamePageProps) => {
       }
     }
 
-    disableCastling(selectedPiece!.FEN);
+    disableCastling(selectedPiece.current!.FEN);
   };
 
   const boardClick = (clickedOn: Piece | string) => {
@@ -702,32 +713,32 @@ const GamePage = ({gameType} : GamePageProps) => {
 
     syncPgnAfterPromote();
     
-    if (typeof clickedOn === "string" && selectedPieceRef.current !== null) {
+    if (typeof clickedOn === "string" && selectedPiece.current !== null) {
       handleFieldClick(temp, clickedOn);
-    } else if (typeof clickedOn !== "string" && selectedPieceRef.current === null) {
+    } else if (typeof clickedOn !== "string" && selectedPiece.current === null) {
       handlePieceSelection(temp, clickedOn);
-    } else if (typeof clickedOn !== "string" && selectedPieceRef.current !== null) {
+    } else if (typeof clickedOn !== "string" && selectedPiece.current !== null) {
       handlePieceClick(temp, clickedOn);
     }
   };
 
   const handleFieldClick = (temp: Field[], clickedOn: string) => {
-    if (selectedPieceRef.current === null) return;
+    if (selectedPiece.current === null) return;
 
     const fieldMatchesClick = (field: Field): boolean => {
       return field.column === clickedOn.charAt(0) && field.row === Number.parseInt(clickedOn.charAt(1));
     };
 
     const findPreviousField = (): Field | undefined => {
-      return temp.find(field => field.piece === selectedPieceRef.current && !fieldMatchesClick(field));
+      return temp.find(field => field.piece === selectedPiece.current && !fieldMatchesClick(field));
     };
 
     const isCastlingMove = (field: Field, previousField: Field): boolean => {
       let isCastling = false;
       
-      if (selectedPieceRef.current!.FEN === "K" && castling[0]) {
+      if (selectedPiece.current!.FEN === "K" && castling[0]) {
         isCastling = (fieldToString(field) === "G1" || fieldToString(field) === "C1") && fieldToString(previousField) === "E1";
-      } else if (selectedPieceRef.current!.FEN === "k" && castling[3]) {
+      } else if (selectedPiece.current!.FEN === "k" && castling[3]) {
         isCastling = (fieldToString(field) === "G8" || fieldToString(field) === "C8") && fieldToString(previousField) === "E8";
       }
 
@@ -740,7 +751,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     if (selectedField === undefined || previousField === undefined) return;
 
     const validMove = isValidMove(
-      fields, previousField, selectedField, selectedPieceRef.current, playerSide, lastMove, castling, setCastling
+      fields, previousField, selectedField, selectedPiece.current, playerSide, lastMove, castling, setCastling
     );
 
     if (
@@ -751,7 +762,7 @@ const GamePage = ({gameType} : GamePageProps) => {
       return;
     }
 
-    selectedField.piece = selectedPieceRef.current;
+    selectedField.piece = selectedPiece.current;
     previousField.piece = undefined;
     
     const previousFieldDiv = document.getElementById(fieldToString(previousField));
@@ -760,23 +771,23 @@ const GamePage = ({gameType} : GamePageProps) => {
 
     let pgnUpdate = "" 
     if (typeof validMove === "object" && validMove.enPassantIndex !== -1) {
-      pgnUpdate += updatePgnEnPassant(temp, validMove, selectedPieceRef.current, previousField, selectedField);
+      pgnUpdate += updatePgnEnPassant(temp, validMove, selectedPiece.current, previousField, selectedField);
       playCaptureSound();
     } else if (isCastlingMove(selectedField, previousField)) {
       handleCastling(clickedOn, previousField);
-      pgnUpdate += updatePgnCastle(selectedPieceRef.current, clickedOn, previousField);
+      pgnUpdate += updatePgnCastle(selectedPiece.current, clickedOn, previousField);
       playCastleSound();
     } else {
-      pgnUpdate += updatePgnMove(selectedPieceRef.current, clickedOn, previousField, selectedField);
+      pgnUpdate += updatePgnMove(selectedPiece.current, clickedOn, previousField, selectedField);
       playMoveSound();
 
-      if (selectedPieceRef.current.PGN === "K") disableCastling(selectedPieceRef.current.FEN);
+      if (selectedPiece.current.PGN === "K") disableCastling(selectedPiece.current.FEN);
     }
 
     let fen = exportFEN(temp, true);
     
-    const promotion = (selectedPieceRef.current.FEN === "P" && selectedField?.row === 8) ||
-      (selectedPieceRef.current.FEN === "p" && selectedField?.row === 1);
+    const promotion = (selectedPiece.current.FEN === "P" && selectedField?.row === 8) ||
+      (selectedPiece.current.FEN === "p" && selectedField?.row === 1);
 
     if (promotion && !cpuEnabled.current) {
       setModalHeading("Pawn Promotion");
@@ -805,11 +816,11 @@ const GamePage = ({gameType} : GamePageProps) => {
     const gameState = getGameState(exportFEN(temp, true));
     if (gameState.mated) {
       pgnUpdate = updatePgnCheckmate(pgnUpdate);
-      setInputDisabled(true);
+      inputDisabled.current = true;
       setDisableFenImportBtn(true);
       setModalHeading("Game Over");
       
-      if (playerSide === "W" && whiteTurn) setModalContent(endGameModalContent("WIN"));
+      if ((playerSide === "W" && whiteTurn.current) || (playerSide === "B" && !whiteTurn.current)) setModalContent(endGameModalContent("WIN"));
       else setModalContent(endGameModalContent("LOSS"));
 
       setModalCloseable(true);
@@ -820,7 +831,7 @@ const GamePage = ({gameType} : GamePageProps) => {
       playCheckSound();
     } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
       pgnUpdate = updatePgnDraw(pgnUpdate);
-      setInputDisabled(true);
+      inputDisabled.current = true;
       setDisableFenImportBtn(true);
       setModalHeading("Game Over");
       setModalContent(endGameModalContent("DRAW"));
@@ -829,7 +840,7 @@ const GamePage = ({gameType} : GamePageProps) => {
       playGameEndSound();
     }
 
-    if (selectedPieceRef.current.PGN === "") {
+    if (selectedPiece.current.PGN === "") {
       halfMove.current = 0;
     } else {
       halfMove.current = halfMove.current + 1;
@@ -838,15 +849,15 @@ const GamePage = ({gameType} : GamePageProps) => {
     setLastMove({
       from: fields.indexOf(previousField!),
       to: fields.indexOf(selectedField!),
-      piece: selectedPieceRef.current.PGN
+      piece: selectedPiece.current.PGN
     });
     setFields(temp);
-    setSelectedPiece(null);
+    selectedPiece.current = null;
     PGN.current = pgnUpdate;
     
-    setWhiteTurn(!whiteTurn);
+    whiteTurn.current = !whiteTurn.current;
 
-    if (whiteTurnRef.current === (playerSide === "B") && !cpuMoved.current) {
+    if (whiteTurn.current === (playerSide === "B") && !cpuMoved.current && !inputDisabled.current) {
       playCpuMove(cpuDepth.current, fen);
       cpuMoved.current = true;
     } else {
@@ -855,29 +866,29 @@ const GamePage = ({gameType} : GamePageProps) => {
   };
 
   const handlePieceSelection = (temp: Field[], clickedOn: Piece) => {
-    if (whiteTurn !== (clickedOn.id.charAt(1) === "w")) return;
+    if (whiteTurn.current !== (clickedOn.id.charAt(1) === "w")) return;
       
-      setSelectedPiece(clickedOn);
+    selectedPiece.current = clickedOn;
 
-      const pieceField = temp.find(field => field.piece === clickedOn);
-      const fieldDiv = document.getElementById(fieldToString(pieceField!));
-      setSelectedFieldColor(fieldDiv!.style.backgroundColor);
-      fieldDiv!.style.backgroundColor = "gold";
+    const pieceField = temp.find(field => field.piece === clickedOn);
+    const fieldDiv = document.getElementById(fieldToString(pieceField!));
+    setSelectedFieldColor(fieldDiv!.style.backgroundColor);
+    fieldDiv!.style.backgroundColor = "gold";
   };
 
   const handlePieceClick = (temp: Field[], clickedOn: Piece) => {
-    if (selectedPieceRef.current === null) return;
+    if (selectedPiece.current === null) return;
 
-    if (clickedOn === selectedPieceRef.current) {
-      setSelectedPiece(null);
+    if (clickedOn === selectedPiece.current) {
+      selectedPiece.current = null;
       
       const pieceField = temp.find(field => field.piece === clickedOn);
       const fieldDiv = document.getElementById(fieldToString(pieceField!));
       fieldDiv!.style.backgroundColor = selectedFieldColor;
       setSelectedFieldColor("");
-    } else if (clickedOn !== selectedPieceRef.current) {
-      if (clickedOn.id.charAt(1) === selectedPieceRef.current.id.charAt(1)) {    
-        const prevPieceField = temp.find(field => field.piece === selectedPieceRef.current);
+    } else if (clickedOn !== selectedPiece.current) {
+      if (clickedOn.id.charAt(1) === selectedPiece.current.id.charAt(1)) {    
+        const prevPieceField = temp.find(field => field.piece === selectedPiece.current);
         const nextPieceField = temp.find(field => field.piece === clickedOn);
 
         if (prevPieceField === undefined || nextPieceField === undefined) return;
@@ -887,18 +898,18 @@ const GamePage = ({gameType} : GamePageProps) => {
 
         if (prevFieldDiv === null || nextFieldDiv === null) return;
         
-        setSelectedPiece(clickedOn);
+        selectedPiece.current = clickedOn;
         prevFieldDiv.style.backgroundColor = selectedFieldColor;
         setSelectedFieldColor(nextFieldDiv.style.backgroundColor);
         nextFieldDiv.style.backgroundColor = "gold";
       } else {
-        const previousField = temp.find(field => field.piece === selectedPieceRef.current);
+        const previousField = temp.find(field => field.piece === selectedPiece.current);
         const selectedField = temp.find(field => field.piece === clickedOn);
 
         if (previousField === undefined || selectedField === undefined) return;
         
         const validMove = isValidMove(
-          fields, previousField, selectedField, selectedPieceRef.current, playerSide, lastMove, castling, setCastling
+          fields, previousField, selectedField, selectedPiece.current, playerSide, lastMove, castling, setCastling
         );
 
         if (
@@ -914,18 +925,18 @@ const GamePage = ({gameType} : GamePageProps) => {
         previousFieldDiv!.style.backgroundColor = selectedFieldColor;
 
         setSelectedFieldColor("");
-        selectedField.piece = selectedPieceRef.current;
+        selectedField.piece = selectedPiece.current;
 
-        if (selectedPieceRef.current.PGN === "K") disableCastling(selectedPieceRef.current.FEN);
+        if (selectedPiece.current.PGN === "K") disableCastling(selectedPiece.current.FEN);
 
         let pgnUpdate = "";
-        pgnUpdate += updatePgnCapture(selectedPieceRef.current, previousField, selectedField);
+        pgnUpdate += updatePgnCapture(selectedPiece.current, previousField, selectedField);
         playCaptureSound();
 
         let fen = exportFEN(temp, true);
 
-        const promotion = (selectedPieceRef.current.FEN === "P" && selectedField?.row === 8) ||
-          (selectedPieceRef.current.FEN === "p" && selectedField?.row === 1);
+        const promotion = (selectedPiece.current.FEN === "P" && selectedField?.row === 8) ||
+          (selectedPiece.current.FEN === "p" && selectedField?.row === 1);
 
         if (promotion) {
           setModalHeading("Pawn Promotion");
@@ -951,11 +962,11 @@ const GamePage = ({gameType} : GamePageProps) => {
         const gameState = getGameState(exportFEN(temp, true));
         if (gameState.mated) {
           pgnUpdate = updatePgnCheckmate(pgnUpdate);
-          setInputDisabled(true);
+          inputDisabled.current = true;
           setDisableFenImportBtn(true);
           setModalHeading("Game Over");
 
-          if (playerSide === "W" && whiteTurn) setModalContent(endGameModalContent("WIN"));
+          if ((playerSide === "W" && whiteTurn.current) || (playerSide === "B" && !whiteTurn.current)) setModalContent(endGameModalContent("WIN"));
           else setModalContent(endGameModalContent("LOSS"));
 
           setModalCloseable(true);
@@ -966,7 +977,7 @@ const GamePage = ({gameType} : GamePageProps) => {
           playCheckSound();
         } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
           pgnUpdate = updatePgnDraw(pgnUpdate);
-          setInputDisabled(true);
+          inputDisabled.current = true;
           setDisableFenImportBtn(true);
           setModalHeading("Game Over");
           setModalContent(endGameModalContent("DRAW"));
@@ -978,16 +989,17 @@ const GamePage = ({gameType} : GamePageProps) => {
         setLastMove({
           from: fields.indexOf(previousField!),
           to: fields.indexOf(selectedField!),
-          piece: selectedPieceRef.current.PGN
+          piece: selectedPiece.current.PGN
         });
         halfMove.current = 0;
         setFields(temp);
-        setSelectedPiece(null);
+        selectedPiece.current = null;
         PGN.current = pgnUpdate;
         
-        setWhiteTurn(!whiteTurn);
+        whiteTurn.current = !whiteTurn.current;
 
-        if (whiteTurnRef.current === (playerSide === "B") && !cpuMoved.current) {
+        // inputDisabled doesn't get updated in time, that's why this works
+        if (whiteTurn.current === (playerSide === "B") && !cpuMoved.current && !inputDisabled.current) {
           playCpuMove(cpuDepth.current, fen);
           cpuMoved.current = true;
         } else {
@@ -1009,11 +1021,11 @@ const GamePage = ({gameType} : GamePageProps) => {
   
           if (cpuMove.from === undefined || cpuMove.to === undefined) surrenderCpu();
           
-          setSelectedPiece(fromField!.piece!);
+          selectedPiece.current = fromField!.piece!;
           boardClick(toField!.piece === undefined ? fieldToString(toField!) : toField!.piece);
           
-          if (playerSide === "W") setWhiteTurn(true);
-          else setWhiteTurn(false);
+          if (playerSide === "W") whiteTurn.current = true;
+          else whiteTurn.current = false;
         }, 300);
       })
       .catch(error => {
@@ -1025,7 +1037,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     if (playerSide === "W") PGN.current = `${PGN.current}1-0`
     else PGN.current = `${PGN.current}0-1`;
 
-    setInputDisabled(true);
+    inputDisabled.current = true;
     setDisableFenImportBtn(true);
 
     setModalHeading("Game Over");
@@ -1039,7 +1051,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     if (playerSide === "W") PGN.current = `${PGN.current}0-1`
     else PGN.current = `${PGN.current}1-0`;
 
-    setInputDisabled(true);
+    inputDisabled.current = true;
     setDisableFenImportBtn(true);
 
     setModalHeading("Game Over");
@@ -1072,10 +1084,10 @@ const GamePage = ({gameType} : GamePageProps) => {
 
   return (
     <>
-      <TurnDisplay whiteTurn={whiteTurn} />
-      <Button buttonType="button" label="Surrender" onClick={() => surrender()} disabled={inputDisabled} />
+      <TurnDisplay whiteTurn={whiteTurn.current} />
+      <Button buttonType="button" label="Surrender" onClick={() => surrender()} disabled={inputDisabled.current} />
 
-      <Board playerSide={playerSide} fields={fields} boardClick={boardClick} disabled={inputDisabled} />
+      <Board playerSide={playerSide} fields={fields} boardClick={boardClick} disabled={inputDisabled.current} />
 
       <Button buttonType="button" label="Import FEN" onClick={() => inputFEN()} disabled={disableFenImportBtn} />
       <br />
