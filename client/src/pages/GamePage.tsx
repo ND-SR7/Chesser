@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { JSX, useCallback, useEffect, useRef, useState } from "react";
 import useStateRef from "react-usestateref";
 
 import Board, { SideString } from "../components/Board/Board";
