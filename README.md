@@ -24,4 +24,3 @@ It contains 2 game modes:
 6. Access client app at `localhost:3000`
 
 # Known issues
-- Clicking on invalid move at certain interval can color the field red

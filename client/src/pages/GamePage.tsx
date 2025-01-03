@@ -131,16 +131,17 @@ const GamePage = ({gameType} : GamePageProps) => {
     const newValue = e.target.value;
     if (newValue >= 1 && newValue <= 4) {
       cpuDepth.current = newValue; 
-    } else { 
-      alert("Please enter a value between 1 and 4.");
+    } else {
       const cpuDepthInputElement = document.getElementById("cpuDepthInput") as HTMLInputElement | null;
       cpuDepthInputElement!.value = "1";
     }
   };
   const cpuDepthContent = (
-    <div hidden={gameType === "SOLO"}>
+    <div key="cpuDepthContent" hidden={gameType === "SOLO"}>
       <label htmlFor="cpuDepthInput">CPU Depth: </label>
       <input id="cpuDepthInput" key="cpuDepthInput" type="number" size={5} min={1} max={4} defaultValue={1} onInput={(e) => cpuDepthCheck(e)}/>
+      <br />
+      <sub>Enter value between 1 and 4</sub>
       <br />
       <br />
     </div>
@@ -518,21 +519,23 @@ const GamePage = ({gameType} : GamePageProps) => {
 
   const blinkInvalidMove = (selectedField: Field) => {
     const fieldDiv = document.getElementById(fieldToString(selectedField));
-      
-      if (fieldDiv) {
-        let blinkCount = 0;
-        const originalColor = fieldDiv.style.backgroundColor;
-    
-        const blinkRed = () => {
-          if (blinkCount < 6) {
-            fieldDiv.style.backgroundColor = blinkCount % 2 === 0 ? "red" : originalColor;
-            blinkCount++;
-            setTimeout(blinkRed, 100);
-          }
-        };
-    
-        blinkRed();
-      }
+
+    if (fieldDiv?.style.backgroundColor === "red") return;
+
+    if (fieldDiv) {
+      let blinkCount = 0;
+      const originalColor = fieldDiv.style.backgroundColor;
+  
+      const blinkRed = () => {
+        if (blinkCount < 6) {
+          fieldDiv.style.backgroundColor = blinkCount % 2 === 0 ? "red" : originalColor;
+          blinkCount++;
+          setTimeout(blinkRed, 100);
+        }
+      };
+  
+      blinkRed();
+    }
   };
 
   // when two or more pieces of the same type can reach the same field
