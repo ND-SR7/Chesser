@@ -452,7 +452,8 @@ const GamePage = ({gameType} : GamePageProps) => {
 
   const promotePiece = (promoteTo: string, tempFields?: Field[]) => {
     const temp = tempFields !== undefined ? [...tempFields] : [...fields];
-    if (whiteTurn.current || (!whiteTurn.current && cpuEnabled.current)) {
+    
+    if (!whiteTurn.current || (whiteTurn.current && cpuEnabled.current)) {
       const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 8);
       switch (promoteTo) {
         case "Q":
