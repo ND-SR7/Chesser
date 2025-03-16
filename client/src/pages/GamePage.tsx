@@ -793,7 +793,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     const promotion = (selectedPiece.current.FEN === "P" && selectedField?.row === 8) ||
       (selectedPiece.current.FEN === "p" && selectedField?.row === 1);
 
-    if (promotion && !cpuEnabled.current) {
+    if (promotion && !cpuMoved.current) {
       setModalHeading("Pawn Promotion");
       setModalContent(promotionModalContent);
       setModalCloseable(false);
@@ -812,7 +812,7 @@ const GamePage = ({gameType} : GamePageProps) => {
       fenParts[0] = fenBoardLines.join("/");
       
       fen = fenParts.join(" ");
-    } else if (promotion && cpuMoved) {
+    } else if (promotion && cpuMoved.current) {
       pgnUpdate = updatePgnPromote(pgnUpdate);
       promotePiece("Q", temp);
     }
