@@ -8,14 +8,6 @@ import TurnDisplay from "../components/Board/TurnDisplay/TurnDisplay";
 import Field from "../models/Field/Field";
 import Piece from "../models/Piece/Piece";
 
-import useSound from "use-sound";
-import moveSound from "../sounds/move.mp3";
-import checkSound from "../sounds/move-check.mp3";
-import captureSound from "../sounds/capture.mp3";
-import castleSound from "../sounds/castle.mp3";
-import promoteSound from "../sounds/promote.mp3";
-import gameEndSound from "../sounds/game-end.mp3";
-
 import bishopWhite from "../assets/bw.png";
 import kingWhite from "../assets/kw.png";
 import knightWhite from "../assets/nw.png";
@@ -28,6 +20,8 @@ import knightBlack from "../assets/nb.png";
 import pawnBlack from "../assets/pb.png";
 import queenBlack from "../assets/qb.png";
 import rookBlack from "../assets/rb.png";
+
+import useGameSounds from "../services/client/SoundService";
 
 import { whiteSideSort } from "../services/client/PieceSortService";
 import { LastMove, ValidMove, isValidMove } from "../services/client/ValidMoveService";
@@ -97,12 +91,14 @@ const GamePage = ({gameType} : GamePageProps) => {
     { id: "rb2", imgSrc: rookBlack, FEN: "r", PGN: "R" }
   ];
 
-  const [playMoveSound] = useSound(moveSound);
-  const [playCheckSound] = useSound(checkSound);
-  const [playCaptureSound] = useSound(captureSound);
-  const [playCastleSound] = useSound(castleSound);
-  const [playPromoteSound] = useSound(promoteSound);
-  const [playGameEndSound] = useSound(gameEndSound);
+  const {
+    playMoveSound,
+    playCheckSound,
+    playCaptureSound,
+    playCastleSound,
+    playPromoteSound,
+    playGameEndSound
+  } = useGameSounds();
 
   const [playerSide, setPlayerSide] = useState<SideString>("B");
   const whiteTurn = useRef(true);
