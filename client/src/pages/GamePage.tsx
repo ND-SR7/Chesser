@@ -185,7 +185,15 @@ const GamePage = ({gameType} : GamePageProps) => {
   const [modalContent, setModalContent] = useState<any>([cpuDepthContent, whiteBtn, blackBtn]);
   const [modalCloseable, setModalCloseable] = useState(false);
   const openModal = () => setModal(true);
-  const closeModal = () => setModal(false);
+  const closeModal = () => {
+    setModal(false);
+    if (typeof deferedCpuMove.current === 'function' && !inputDisabled.current) {
+      deferedCpuMove.current(cpuDepth.current, exportFEN(undefined, false));
+    }
+    deferedCpuMove.current = null;
+  }
+  
+  const deferedCpuMove = useRef<any>(null); // handling promotion when playing against CPU
 
   // PGN is missing info after promotion
   // used to correct it
@@ -485,7 +493,6 @@ const GamePage = ({gameType} : GamePageProps) => {
 
     playPromoteSound();
     setFields(temp);
-    closeModal();
 
     // checking game state after promotion
     // previously checked game state was with pawn on first/last row
@@ -511,6 +518,8 @@ const GamePage = ({gameType} : GamePageProps) => {
       setModalCloseable(true);
       openModal();
       playGameEndSound();
+    } else {
+      closeModal();
     }
   };
 
@@ -795,19 +804,6 @@ const GamePage = ({gameType} : GamePageProps) => {
       setModalCloseable(false);
       openModal();
       pgnUpdate = updatePgnPromote(pgnUpdate);
-      
-      // assuming queen is selected in promotion, for CPU move generation
-      // it is most likely queen, but also covers promotion to rook or bishop
-      // only knight promotion is not handled optimally
-      const fenParts = fen.split(" ");
-      const fenBoardLines = fenParts[0].split("/");
-
-      fenBoardLines[0] = fenBoardLines[0].replace("P", "Q");
-      fenBoardLines[7] = fenBoardLines[7].replace("p", "q");
-
-      fenParts[0] = fenBoardLines.join("/");
-      
-      fen = fenParts.join(" ");
     } else if (promotion && cpuMoved.current) {
       pgnUpdate = updatePgnPromote(pgnUpdate);
       promotePiece("Q", temp);
@@ -858,7 +854,8 @@ const GamePage = ({gameType} : GamePageProps) => {
     whiteTurn.current = !whiteTurn.current;
 
     if (whiteTurn.current === (playerSide === "B") && !cpuMoved.current && !inputDisabled.current) {
-      playCpuMove(cpuDepth.current, fen);
+      if (promotion) deferedCpuMove.current = playCpuMove;
+      else playCpuMove(cpuDepth.current, fen);
       cpuMoved.current = true;
     } else {
       cpuMoved.current = false;
@@ -944,19 +941,6 @@ const GamePage = ({gameType} : GamePageProps) => {
           setModalCloseable(false);
           openModal();
           pgnUpdate = updatePgnPromote(pgnUpdate);
-          
-          // assuming queen is selected in promotion, for CPU move generation
-          // it is most likely queen, but also covers promotion to rook or bishop
-          // only knight promotion is not handled optimally
-          const fenParts = fen.split(" ");
-          const fenBoardLines = fenParts[0].split("/");
-    
-          fenBoardLines[0] = fenBoardLines[0].replace("P", "Q");
-          fenBoardLines[7] = fenBoardLines[7].replace("p", "q");
-
-          fenParts[0] = fenBoardLines.join("/");
-          
-          fen = fenParts.join(" ");
         }
 
         const gameState = getGameState(exportFEN(temp, true));
@@ -1000,7 +984,8 @@ const GamePage = ({gameType} : GamePageProps) => {
 
         // inputDisabled doesn't get updated in time, that's why this works
         if (whiteTurn.current === (playerSide === "B") && !cpuMoved.current && !inputDisabled.current) {
-          playCpuMove(cpuDepth.current, fen);
+          if (promotion) deferedCpuMove.current = playCpuMove;
+          else playCpuMove(cpuDepth.current, fen);
           cpuMoved.current = true;
         } else {
           cpuMoved.current = false;

@@ -24,4 +24,3 @@ It contains 2 game modes:
 6. Access client app at `localhost:3000`
 
 # Known issues
-- When playing against CPU, promotion is automated to queen
