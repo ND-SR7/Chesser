@@ -10,8 +10,11 @@ It contains 2 game modes:
 - curl, if running build script
 
 # Running the app
+### Prerequisites
+- Automatic Start - check if build_and_run and mvnw scripts have execution rights
+- Manual Start - check if mvnw script has execution rights
+
 ### Automatic
-0. Check if the build script has execution rights
 1. Run `./build_and_run.sh` script
 2. Client app will open at `localhost:3000` when ready
 
