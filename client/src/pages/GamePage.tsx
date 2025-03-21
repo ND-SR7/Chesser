@@ -113,6 +113,7 @@ const GamePage = ({gameType} : GamePageProps) => {
   const turnCounter = useRef(1);
   const halfMove = useRef(0);
   const [lastMove, setLastMove] = useState<LastMove>();
+  const syncPgnCheck = useRef(false); // fixing PGN when promotion checks
   // checking if castling is legal
   // false if moved, in order, from white: king, kingside rook, queenside rook
   const [castling, setCastling] = useState<boolean[]>([true, true, true, true, true, true]);
@@ -203,9 +204,14 @@ const GamePage = ({gameType} : GamePageProps) => {
     const promotionField = fields.find(field => fieldToString(field) === promotionFieldString);
     
     if (promotionField && promotionField.piece) {
-      const updatedPGN = PGN.current.replace("= ", `=${promotionField.piece.PGN} `);
+      const updatedPGN = PGN.current.replace("= ", `=${promotionField.piece.PGN}`);
       PGN.current = updatedPGN;
     }
+
+    if (syncPgnCheck.current) PGN.current += "+ ";
+    else PGN.current += " ";
+
+    syncPgnCheck.current = false;
   }, [fields]);
 
   useEffect(() => {
@@ -444,7 +450,7 @@ const GamePage = ({gameType} : GamePageProps) => {
         setDisableFenImportBtn(true);
         PGN.current = "";
 
-        if (whiteTurnFEN !== (playerSide === "W")) {
+        if (whiteTurnFEN !== (playerSide === "W") && cpuEnabled.current) {
           playCpuMove(cpuDepth.current, exportFEN(temp, false));
           cpuMoved.current = true;
         }
@@ -457,7 +463,7 @@ const GamePage = ({gameType} : GamePageProps) => {
   const promotePiece = (promoteTo: string, tempFields?: Field[]) => {
     const temp = tempFields !== undefined ? [...tempFields] : [...fields];
     
-    if (!whiteTurn.current || (whiteTurn.current && cpuEnabled.current)) {
+    if (!whiteTurn.current && !cpuEnabled.current) {
       const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 8);
       switch (promoteTo) {
         case "Q":
@@ -509,7 +515,9 @@ const GamePage = ({gameType} : GamePageProps) => {
       openModal();
       playGameEndSound();
     } else if (gameState.kingAttacked) {
+      syncPgnCheck.current = true;
       playCheckSound();
+      closeModal();
     } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
       inputDisabled.current = true;
       setDisableFenImportBtn(true);
@@ -853,7 +861,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     
     whiteTurn.current = !whiteTurn.current;
 
-    if (whiteTurn.current === (playerSide === "B") && !cpuMoved.current && !inputDisabled.current) {
+    if (whiteTurn.current === (playerSide === "B") && cpuEnabled.current && !cpuMoved.current && !inputDisabled.current) {
       if (promotion) deferedCpuMove.current = playCpuMove;
       else playCpuMove(cpuDepth.current, fen);
       cpuMoved.current = true;
@@ -935,13 +943,16 @@ const GamePage = ({gameType} : GamePageProps) => {
         const promotion = (selectedPiece.current.FEN === "P" && selectedField?.row === 8) ||
           (selectedPiece.current.FEN === "p" && selectedField?.row === 1);
 
-        if (promotion) {
-          setModalHeading("Pawn Promotion");
-          setModalContent(promotionModalContent);
-          setModalCloseable(false);
-          openModal();
-          pgnUpdate = updatePgnPromote(pgnUpdate);
-        }
+          if (promotion && !cpuMoved.current) {
+            setModalHeading("Pawn Promotion");
+            setModalContent(promotionModalContent);
+            setModalCloseable(false);
+            openModal();
+            pgnUpdate = updatePgnPromote(pgnUpdate);
+          } else if (promotion && cpuMoved.current) {
+            pgnUpdate = updatePgnPromote(pgnUpdate);
+            promotePiece("Q", temp);
+          }
 
         const gameState = getGameState(exportFEN(temp, true));
         if (gameState.mated) {
@@ -983,7 +994,7 @@ const GamePage = ({gameType} : GamePageProps) => {
         whiteTurn.current = !whiteTurn.current;
 
         // inputDisabled doesn't get updated in time, that's why this works
-        if (whiteTurn.current === (playerSide === "B") && !cpuMoved.current && !inputDisabled.current) {
+        if (whiteTurn.current === (playerSide === "B") && cpuEnabled.current && !cpuMoved.current && !inputDisabled.current) {
           if (promotion) deferedCpuMove.current = playCpuMove;
           else playCpuMove(cpuDepth.current, fen);
           cpuMoved.current = true;
