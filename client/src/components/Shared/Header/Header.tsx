@@ -11,7 +11,7 @@ const Header = () => {
   return (
     <HeaderStyled>
       <LogoStyled src={logo} alt="Chesser Logo" onClick={() => navigate("/")} />
-      <h1 id="appName">Chesser</h1>
+      <p id="appName">Chesser</p>
     </HeaderStyled>
   );
 };
