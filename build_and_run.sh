@@ -15,6 +15,10 @@ cleanup() {
 
 trap cleanup SIGINT
 
+mkdir -p logs
+touch logs/client.log
+touch logs/server.log
+
 log_message "Navigating to server directory..."
 cd server || { log_message "Failed to navigate to server directory."; exit 1; }
 
@@ -29,14 +33,14 @@ if [ $? -eq 0 ]; then
   log_message "Server app is up and running at http://localhost:8080."
 else
   log_message "Failed to start the server app."
-  exit 1
+  exit 2
 fi
 
 log_message "Navigating to client directory..."
-cd ../client || { log_message "Failed to navigate to client directory."; exit 1; }
+cd ../client || { log_message "Failed to navigate to client directory."; exit 3; }
 
 log_message "Running npm install to install node_modules..."
-npm install || { log_message "npm install failed."; exit 1; }
+npm install &> ../logs/client.log || { log_message "npm install failed."; exit 4; }
 
 log_message "Starting the client app..."
 npm start &> ../logs/client.log &
@@ -49,7 +53,7 @@ if [ $? -eq 0 ]; then
   log_message "Client app is up and running at http://localhost:3000."
 else
   log_message "Failed to start the client app."
-  exit 1
+  exit 5
 fi
 
 log_message "Chesser is ready for use."
