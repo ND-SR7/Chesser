@@ -234,7 +234,7 @@ const GamePage = ({gameType} : GamePageProps) => {
 
       const fromFieldDiv = document.getElementById(fieldToString(fields[lastMove.from]));
       const toFieldDiv = document.getElementById(fieldToString(fields[lastMove.to]));
-      fromFieldDiv!.style.backgroundColor = "yellowgreen";
+      fromFieldDiv!.style.backgroundColor = "greenyellow";
       toFieldDiv!.style.backgroundColor = "greenyellow";
     }
   }, [fields, syncPgnAfterPromote, gameType, lastMove]);
@@ -250,7 +250,10 @@ const GamePage = ({gameType} : GamePageProps) => {
       cpuDepth.current = Number(depth);
     }
     
-    if (playerSide === "B" && cpuEnabled.current) playCpuMove(cpuDepth.current, exportFEN());
+    if (playerSide === "B" && cpuEnabled.current) {
+      setFields(fields.reverse()); // TODO: fields not ordered correctly against CPU as black
+      playCpuMove(cpuDepth.current, exportFEN());
+    }
     
     closeModal();
   };
@@ -356,6 +359,8 @@ const GamePage = ({gameType} : GamePageProps) => {
     const fen = fenInputElement?.value.trim() || "";
 
     if (fen !== "") {
+      selectedPiece.current = null;
+      
       try {
         let temp = [...fields];
         temp.sort(whiteSideSort);
