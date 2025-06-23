@@ -177,8 +177,15 @@ export const isValidMove = (
         if (Math.abs(fromRow - toRow) <= 1 && Math.abs(fromCol - toCol) <= 1) {
           if (tempPosition === toIndex) {
             for (let i of kingMoves) {
-              if (fields[toIndex + i]?.piece?.PGN === "K" && fields[toIndex + i]?.piece?.id !== movedPiece?.id) {
-                return false;
+              const fromRow = Math.floor(toIndex / 8);
+              const fromCol = toIndex % 8;
+              const toRow = Math.floor((toIndex + i) / 8);
+              const toCol = (toIndex + i) % 8;
+
+              if (Math.abs(fromRow - toRow) <= 1 && Math.abs(fromCol - toCol) <= 1) {
+                if (fields[toIndex + i]?.piece?.PGN === "K" && fields[toIndex + i]?.piece?.id !== movedPiece?.id) {
+                  return false;
+                }
               }
             }
             return true;

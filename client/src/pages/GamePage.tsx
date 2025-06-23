@@ -237,7 +237,7 @@ const GamePage = ({gameType} : GamePageProps) => {
       fromFieldDiv!.style.backgroundColor = "yellowgreen";
       toFieldDiv!.style.backgroundColor = "greenyellow";
     }
-  }, [fields, syncPgnAfterPromote, gameType]);
+  }, [fields, syncPgnAfterPromote, gameType, lastMove]);
 
   const setupBoard = (playerSide: SideString) => {
     setPlayerSide(playerSide);
