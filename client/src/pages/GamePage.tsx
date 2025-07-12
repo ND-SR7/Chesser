@@ -214,6 +214,12 @@ const GamePage = ({gameType} : GamePageProps) => {
     syncPgnCheck.current = false;
   }, [fields]);
 
+  const resetFieldColors = useCallback(() => {
+    fields.forEach(field => {
+      document.getElementById(fieldToString(field))!.style.backgroundColor = field.color;
+    });
+  }, [fields]);
+
   useEffect(() => {
     let boardEmpty = true;
     fields.forEach(field => {
@@ -227,17 +233,15 @@ const GamePage = ({gameType} : GamePageProps) => {
       syncPgnAfterPromote();
     }
 
-    if (lastMove !== undefined) { // visualizing previous move
-      fields.forEach(field => {
-        document.getElementById(fieldToString(field))!.style.backgroundColor = field.color;
-      });
+    if (lastMove !== undefined && PGN.current.trim() !== "") { // visualizing previous move
+      resetFieldColors();
 
       const fromFieldDiv = document.getElementById(fieldToString(fields[lastMove.from]));
       const toFieldDiv = document.getElementById(fieldToString(fields[lastMove.to]));
       fromFieldDiv!.style.backgroundColor = "greenyellow";
       toFieldDiv!.style.backgroundColor = "greenyellow";
     }
-  }, [fields, syncPgnAfterPromote, gameType, lastMove]);
+  }, [fields, syncPgnAfterPromote, gameType, lastMove, resetFieldColors]);
 
   const setupBoard = (playerSide: SideString) => {
     setPlayerSide(playerSide);
@@ -360,6 +364,7 @@ const GamePage = ({gameType} : GamePageProps) => {
 
     if (fen !== "") {
       selectedPiece.current = null;
+      resetFieldColors();
       
       try {
         let temp = [...fields];
