@@ -478,39 +478,41 @@ const GamePage = ({gameType} : GamePageProps) => {
 
   const promotePiece = (promoteTo: string, tempFields?: Field[]) => {
     const temp = tempFields !== undefined ? [...tempFields] : [...fields];
-    
-    if (!whiteTurn.current && !cpuEnabled.current) {
-      const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 8);
+    const promotionFieldWhite = temp.find(field => field.piece?.PGN === "" && field.row === 8);
+    const promotionFieldBlack = temp.find(field => field.piece?.PGN === "" && field.row === 1);
+
+    if (promotionFieldWhite) {
       switch (promoteTo) {
         case "Q":
-          promotionField!.piece = {id: `qw${turnCounter.current}`, FEN: "Q", PGN: "Q", imgSrc: queenWhite}
+          promotionFieldWhite.piece = {id: `qw${turnCounter.current}`, FEN: "Q", PGN: "Q", imgSrc: queenWhite}
           break;
         case "N":
-          promotionField!.piece = {id: `nw${turnCounter.current}`, FEN: "N", PGN: "N", imgSrc: knightWhite}
+          promotionFieldWhite.piece = {id: `nw${turnCounter.current}`, FEN: "N", PGN: "N", imgSrc: knightWhite}
           break;
         case "R":
-          promotionField!.piece = {id: `rw${turnCounter.current}`, FEN: "R", PGN: "R", imgSrc: rookWhite}
+          promotionFieldWhite.piece = {id: `rw${turnCounter.current}`, FEN: "R", PGN: "R", imgSrc: rookWhite}
           break;
         case "B":
-          promotionField!.piece = {id: `bw${turnCounter.current}`, FEN: "B", PGN: "B", imgSrc: bishopWhite}
+          promotionFieldWhite.piece = {id: `bw${turnCounter.current}`, FEN: "B", PGN: "B", imgSrc: bishopWhite}
+          break;
+      }
+    } else if (promotionFieldBlack) {
+      switch (promoteTo) {
+        case "Q":
+          promotionFieldBlack.piece = {id: `qb${turnCounter.current}`, FEN: "q", PGN: "Q", imgSrc: queenBlack}
+          break;
+        case "N":
+          promotionFieldBlack.piece = {id: `nb${turnCounter.current}`, FEN: "n", PGN: "N", imgSrc: knightBlack}
+          break;
+        case "R":
+          promotionFieldBlack.piece = {id: `rb${turnCounter.current}`, FEN: "r", PGN: "R", imgSrc: rookBlack}
+          break;
+        case "B":
+          promotionFieldBlack.piece = {id: `bb${turnCounter.current}`, FEN: "b", PGN: "B", imgSrc: bishopBlack}
           break;
       }
     } else {
-      const promotionField = temp.find(field => field.piece?.PGN === "" && field.row === 1);
-      switch (promoteTo) {
-        case "Q":
-          promotionField!.piece = {id: `qb${turnCounter.current}`, FEN: "q", PGN: "Q", imgSrc: queenBlack}
-          break;
-        case "N":
-          promotionField!.piece = {id: `nb${turnCounter.current}`, FEN: "n", PGN: "N", imgSrc: knightBlack}
-          break;
-        case "R":
-          promotionField!.piece = {id: `rb${turnCounter.current}`, FEN: "r", PGN: "R", imgSrc: rookBlack}
-          break;
-        case "B":
-          promotionField!.piece = {id: `bb${turnCounter.current}`, FEN: "b", PGN: "B", imgSrc: bishopBlack}
-          break;
-      }
+      console.error('Unexpected board state during promotion', promotionFieldWhite, promotionFieldBlack);
     }
 
     playPromoteSound();
