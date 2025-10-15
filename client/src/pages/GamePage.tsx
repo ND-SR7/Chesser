@@ -105,6 +105,7 @@ const GamePage = ({gameType} : GamePageProps) => {
   const cpuMoved = useRef(false);
   const cpuEnabled = useRef(false);
   const cpuDepth = useRef(1);
+  const expertMode = useRef(false);
 
   const selectedPiece = useRef<Piece | null>(null);
   const [selectedFieldColor, setSelectedFieldColor] = useState(""); // visualizing clicked-on field
@@ -139,6 +140,12 @@ const GamePage = ({gameType} : GamePageProps) => {
       <input id="cpuDepthInput" key="cpuDepthInput" type="number" size={5} min={1} max={4} defaultValue={1} onInput={(e) => cpuDepthCheck(e)}/>
       <br />
       <sub>Enter value between 1 and 4</sub>
+      <br />
+      <br />
+      <label htmlFor="expertModeCheckbox">Expert Mode: </label>
+      <input id="expertModeCheckbox" type="checkbox" />
+      <br />
+      <sub>(depth selection ignored)</sub>
       <br />
       <br />
     </div>
@@ -252,11 +259,14 @@ const GamePage = ({gameType} : GamePageProps) => {
       const cpuDepthInputElement = document.getElementById("cpuDepthInput") as HTMLInputElement | null;
       const depth = cpuDepthInputElement?.value.trim() || "";
       cpuDepth.current = Number(depth);
+
+      const expertModeCheckbox = document.getElementById("expertModeCheckbox") as HTMLInputElement | null;
+      expertMode.current = expertModeCheckbox?.checked || false;
     }
     
     if (playerSide === "B" && cpuEnabled.current) {
       setFields(fields.reverse()); // TODO: fields not ordered correctly against CPU as black
-      playCpuMove(cpuDepth.current, exportFEN());
+      playCpuMove(cpuDepth.current, exportFEN(), expertMode.current);
     }
     
     closeModal();
@@ -472,7 +482,7 @@ const GamePage = ({gameType} : GamePageProps) => {
         PGN.current = "";
 
         if (whiteTurnFEN !== (playerSide === "W") && cpuEnabled.current) {
-          playCpuMove(cpuDepth.current, exportFEN(temp, false));
+          playCpuMove(cpuDepth.current, exportFEN(temp, false), expertMode.current);
           cpuMoved.current = true;
         }
       } catch (error) {
@@ -886,7 +896,7 @@ const GamePage = ({gameType} : GamePageProps) => {
 
     if (whiteTurn.current === (playerSide === "B") && cpuEnabled.current && !cpuMoved.current && !inputDisabled.current) {
       if (promotion) deferedCpuMove.current = playCpuMove;
-      else playCpuMove(cpuDepth.current, fen);
+      else playCpuMove(cpuDepth.current, fen, expertMode.current);
       cpuMoved.current = true;
     } else {
       cpuMoved.current = false;
@@ -1019,7 +1029,7 @@ const GamePage = ({gameType} : GamePageProps) => {
         // inputDisabled doesn't get updated in time, that's why this works
         if (whiteTurn.current === (playerSide === "B") && cpuEnabled.current && !cpuMoved.current && !inputDisabled.current) {
           if (promotion) deferedCpuMove.current = playCpuMove;
-          else playCpuMove(cpuDepth.current, fen);
+          else playCpuMove(cpuDepth.current, fen, expertMode.current);
           cpuMoved.current = true;
         } else {
           cpuMoved.current = false;
@@ -1028,19 +1038,40 @@ const GamePage = ({gameType} : GamePageProps) => {
     }
   };
 
-  const playCpuMove = async (depth: number, fen: string) => {
+  const playCpuMove = async (depth: number, fen: string, expertMode: boolean) => {
     if (gameType === "SOLO") return;
 
-    getCpuMove(fen, depth)
+    getCpuMove(fen, depth, expertMode)
       .then(cpuMove => {
         setTimeout(() => { // for smoother cpu moves
           const temp = [...fields];
           const fromField = temp.find(field => fieldToString(field) === cpuMove.from);
-          const toField = temp.find(field => fieldToString(field) === cpuMove.to);
+          let toField = temp.find(field => fieldToString(field) === cpuMove.to);
   
           if (cpuMove.from === undefined || cpuMove.to === undefined) surrenderCpu();
           
           selectedPiece.current = fromField!.piece!;
+          
+          if (expertMode && selectedPiece.current.FEN === 'K' && toField!.piece?.FEN === 'R') {
+            switch (fieldToString(toField!)) {
+              case "A1":
+                toField = temp.find(field => fieldToString(field) === "C1");
+                break;
+              case "H1":
+                toField = temp.find(field => fieldToString(field) === "G1");
+                break;
+            }
+          } else if (expertMode && selectedPiece.current.FEN === 'k' && toField!.piece?.FEN === 'r') {
+            switch (fieldToString(toField!)) {
+              case "A8":
+                toField = temp.find(field => fieldToString(field) === "C8");
+                break;
+              case "H8":
+                toField = temp.find(field => fieldToString(field) === "G8");
+                break;
+            }
+          }
+
           boardClick(toField!.piece === undefined ? fieldToString(toField!) : toField!.piece);
           
           if (playerSide === "W") whiteTurn.current = true;

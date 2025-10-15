@@ -9,4 +9,5 @@ public class GetCPUMoveDTO {
 
     private String fen;
     private int depth;
+    private boolean expertMode;
 }

@@ -2,10 +2,10 @@ import CPUMove from "../../models/CPUMove/CPUMove";
 
 const url = "http://localhost:8080/api/v1/cpu-move";
 
-export const getCpuMove = async (fen: string, depth: number): Promise<CPUMove> => {
+export const getCpuMove = async (fen: string, depth: number, expertMode: boolean): Promise<CPUMove> => {
   return fetch(url, {
     method: "POST",
-    body: JSON.stringify({ fen, depth }),
+    body: JSON.stringify({ fen, depth, expertMode }),
     headers: { "Content-Type": "application/json" }
   })
   .then(response => {

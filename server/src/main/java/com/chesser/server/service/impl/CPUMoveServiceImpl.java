@@ -1,8 +1,13 @@
 package com.chesser.server.service.impl;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import com.chesser.server.model.dto.GetCPUMoveDTO;
 import com.chesser.server.model.entity.CPUMove;
@@ -17,9 +22,37 @@ import com.github.bhlangonijr.chesslib.move.Move;
 public class CPUMoveServiceImpl implements CPUMoveService {
 
     private final Board board = new Board();
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Override
     public CPUMove getCPUMove(GetCPUMoveDTO dto) {
+        if (dto.isExpertMode()) {
+            String lichessApiCloudEvalUrl = "https://lichess.org/api/cloud-eval?fen=";
+
+            try {
+                ResponseEntity<String> response = restTemplate.getForEntity(lichessApiCloudEvalUrl + dto.getFen(), String.class);
+
+                String regex = "\"moves\":\"([^\"]+)\"";
+                Pattern pattern = Pattern.compile(regex);
+                Matcher matcher = pattern.matcher(response.getBody());
+
+                if (matcher.find()) {
+                    String moves = matcher.group(1);
+                    String[] moveArray = moves.split(" ");
+                    String firstMove = moveArray[0];
+
+                    CPUMove cpuMove = new CPUMove();
+                    cpuMove.setFrom(firstMove.substring(0, 2).toUpperCase());
+                    cpuMove.setTo(firstMove.substring(2).toUpperCase());
+
+                    return cpuMove;
+                }
+            } catch (RestClientException e) {
+                System.out.println("Expert mode failed to fetch move, switching to maximum depth local search");
+                dto.setDepth(4);
+            }
+        }
+
         board.loadFromFen(dto.getFen());
 
         Side cpuSide = board.getSideToMove();
