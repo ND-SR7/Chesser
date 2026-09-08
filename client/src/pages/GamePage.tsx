@@ -115,6 +115,8 @@ const GamePage = ({gameType} : GamePageProps) => {
   const halfMove = useRef(0);
   const [lastMove, setLastMove] = useState<LastMove>();
   const syncPgnCheck = useRef(false); // fixing PGN when promotion checks
+  const pendingPromotionPgn = useRef<string | null>(null);
+  const pendingPromotionWhiteTurn = useRef<boolean | null>(null);
   // checking if castling is legal
   // false if moved, in order, from white: king, kingside rook, queenside rook
   const [castling, setCastling] = useState<boolean[]>([true, true, true, true, true, true]);
@@ -193,10 +195,10 @@ const GamePage = ({gameType} : GamePageProps) => {
   const [modalContent, setModalContent] = useState<any>([cpuDepthContent, whiteBtn, blackBtn]);
   const [modalCloseable, setModalCloseable] = useState(false);
   const openModal = () => setModal(true);
-  const closeModal = () => {
+  const closeModal = (boardFields?: Field[]) => {
     setModal(false);
     if (typeof deferedCpuMove.current === 'function' && !inputDisabled.current) {
-      deferedCpuMove.current(cpuDepth.current, exportFEN(undefined, false));
+      deferedCpuMove.current(cpuDepth.current, exportFEN(boardFields, false), boardFields);
     }
     deferedCpuMove.current = null;
   }
@@ -533,15 +535,24 @@ const GamePage = ({gameType} : GamePageProps) => {
     playPromoteSound();
     setFields(temp);
 
+    if (pendingPromotionPgn.current !== null) {
+      PGN.current = pendingPromotionPgn.current.replace("= ", `=${promoteTo} `);
+      pendingPromotionPgn.current = null;
+    }
+
+    const moverWhiteTurn = pendingPromotionWhiteTurn.current ?? whiteTurn.current;
+    pendingPromotionWhiteTurn.current = null;
+
     // checking game state after promotion
     // previously checked game state was with pawn on first/last row
-    const gameState = getGameState(exportFEN(temp, false));
+    const gameState = getGameState(exportFEN(temp, moverWhiteTurn === whiteTurn.current));
     if (gameState.mated) {
+      PGN.current = updatePgnCheckmate(PGN.current, moverWhiteTurn);
       inputDisabled.current = true;
       setDisableFenImportBtn(true);
       setModalHeading("Game Over");
       
-      if ((playerSide === "W" && whiteTurn.current) || (playerSide === "B" && !whiteTurn.current)) setModalContent(endGameModalContent("WIN"));
+      if ((playerSide === "W" && moverWhiteTurn) || (playerSide === "B" && !moverWhiteTurn)) setModalContent(endGameModalContent("WIN"));
       else setModalContent(endGameModalContent("LOSS"));
 
       setModalCloseable(true);
@@ -550,7 +561,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     } else if (gameState.kingAttacked) {
       syncPgnCheck.current = true;
       playCheckSound();
-      closeModal();
+      closeModal(temp);
     } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
       inputDisabled.current = true;
       setDisableFenImportBtn(true);
@@ -562,6 +573,8 @@ const GamePage = ({gameType} : GamePageProps) => {
     } else {
       closeModal();
     }
+
+    return PGN.current;
   };
 
   const blinkInvalidMove = (selectedField: Field) => {
@@ -701,13 +714,8 @@ const GamePage = ({gameType} : GamePageProps) => {
     return `${pgn}+ `;
   };
 
-  const updatePgnCheckmate = (pgn: string): string => {
-    let updatedPGN = "";
-    playerSide === "W" && whiteTurn.current ?
-      updatedPGN = `${pgn.substring(0, pgn.length-1)}# 1-0` :
-      updatedPGN = `${pgn.substring(0, pgn.length-1)}# 0-1`;
-    
-    return updatedPGN;
+  const updatePgnCheckmate = (pgn: string, moverWhiteTurn: boolean = whiteTurn.current): string => {
+    return `${pgn.substring(0, pgn.length - 1)}# ${moverWhiteTurn ? "1-0" : "0-1"}`;
   };
 
   const updatePgnDraw = (pgn: string): string => {
@@ -835,6 +843,7 @@ const GamePage = ({gameType} : GamePageProps) => {
     }
 
     let fen = exportFEN(temp, true);
+    let promotionGameStateHandled = false;
     
     const promotion = (selectedPiece.current.FEN === "P" && selectedField?.row === 8) ||
       (selectedPiece.current.FEN === "p" && selectedField?.row === 1);
@@ -845,13 +854,18 @@ const GamePage = ({gameType} : GamePageProps) => {
       setModalCloseable(false);
       openModal();
       pgnUpdate = updatePgnPromote(pgnUpdate);
+      pendingPromotionPgn.current = pgnUpdate;
+      pendingPromotionWhiteTurn.current = whiteTurn.current;
     } else if (promotion && cpuMoved.current) {
       pgnUpdate = updatePgnPromote(pgnUpdate);
-      promotePiece("Q", temp);
+      pendingPromotionPgn.current = pgnUpdate;
+      pendingPromotionWhiteTurn.current = whiteTurn.current;
+      pgnUpdate = promotePiece("Q", temp);
+      promotionGameStateHandled = true;
     }
 
     const gameState = getGameState(exportFEN(temp, true));
-    if (gameState.mated) {
+    if (!promotionGameStateHandled && gameState.mated) {
       pgnUpdate = updatePgnCheckmate(pgnUpdate);
       inputDisabled.current = true;
       setDisableFenImportBtn(true);
@@ -863,10 +877,10 @@ const GamePage = ({gameType} : GamePageProps) => {
       setModalCloseable(true);
       openModal();
       playGameEndSound();
-    } else if (gameState.kingAttacked) {
+    } else if (!promotionGameStateHandled && gameState.kingAttacked) {
       pgnUpdate = updatePgnCheck(pgnUpdate);
       playCheckSound();
-    } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
+    } else if (!promotionGameStateHandled && (gameState.draw || gameState.stalemate || gameState.insufficientMaterial)) {
       pgnUpdate = updatePgnDraw(pgnUpdate);
       inputDisabled.current = true;
       setDisableFenImportBtn(true);
@@ -972,6 +986,7 @@ const GamePage = ({gameType} : GamePageProps) => {
         playCaptureSound();
 
         let fen = exportFEN(temp, true);
+        let promotionGameStateHandled = false;
 
         const promotion = (selectedPiece.current.FEN === "P" && selectedField?.row === 8) ||
           (selectedPiece.current.FEN === "p" && selectedField?.row === 1);
@@ -982,13 +997,18 @@ const GamePage = ({gameType} : GamePageProps) => {
             setModalCloseable(false);
             openModal();
             pgnUpdate = updatePgnPromote(pgnUpdate);
+            pendingPromotionPgn.current = pgnUpdate;
+            pendingPromotionWhiteTurn.current = whiteTurn.current;
           } else if (promotion && cpuMoved.current) {
             pgnUpdate = updatePgnPromote(pgnUpdate);
-            promotePiece("Q", temp);
+            pendingPromotionPgn.current = pgnUpdate;
+            pendingPromotionWhiteTurn.current = whiteTurn.current;
+            pgnUpdate = promotePiece("Q", temp);
+            promotionGameStateHandled = true;
           }
 
         const gameState = getGameState(exportFEN(temp, true));
-        if (gameState.mated) {
+        if (!promotionGameStateHandled && gameState.mated) {
           pgnUpdate = updatePgnCheckmate(pgnUpdate);
           inputDisabled.current = true;
           setDisableFenImportBtn(true);
@@ -1000,10 +1020,10 @@ const GamePage = ({gameType} : GamePageProps) => {
           setModalCloseable(true);
           openModal();
           playGameEndSound();
-        } else if (gameState.kingAttacked) {
+        } else if (!promotionGameStateHandled && gameState.kingAttacked) {
           pgnUpdate = updatePgnCheck(pgnUpdate);
           playCheckSound();
-        } else if (gameState.draw || gameState.stalemate || gameState.insufficientMaterial) {
+        } else if (!promotionGameStateHandled && (gameState.draw || gameState.stalemate || gameState.insufficientMaterial)) {
           pgnUpdate = updatePgnDraw(pgnUpdate);
           inputDisabled.current = true;
           setDisableFenImportBtn(true);
@@ -1038,13 +1058,13 @@ const GamePage = ({gameType} : GamePageProps) => {
     }
   };
 
-  const playCpuMove = async (depth: number, fen: string, expertMode: boolean) => {
+  const playCpuMove = async (depth: number, fen: string, expertMode: boolean, boardFields?: Field[]) => {
     if (gameType === "SOLO") return;
 
     getCpuMove(fen, depth, expertMode)
       .then(cpuMove => {
         setTimeout(() => { // for smoother cpu moves
-          const temp = [...fields];
+          const temp = [...(boardFields ?? fields)];
           const fromField = temp.find(field => fieldToString(field) === cpuMove.from);
           let toField = temp.find(field => fieldToString(field) === cpuMove.to);
   
